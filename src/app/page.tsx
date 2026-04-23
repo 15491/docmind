@@ -1,65 +1,115 @@
-import Image from "next/image";
+import Link from "next/link"
+import { ArrowRight, Shield } from "lucide-react"
+import { FEATURES, STEPS } from "./constants"
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-white text-[#0f0f10] flex flex-col">
+      <nav className="flex items-center justify-between px-8 h-14 border-b border-[#ebebed] bg-white sticky top-0 z-10">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-[28px] h-[28px] rounded-[7px] flex items-center justify-center text-[12px] font-bold text-white tracking-tight"
+            style={{ background: "#18181b", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            D
+          </div>
+          <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight">DocMind</span>
         </div>
-      </main>
+        <div className="flex items-center gap-1">
+          <Link href="/login" className="h-8 px-4 text-[13px] font-medium text-[#62636b] hover:text-[#0f0f10] transition-colors flex items-center">
+            登录
+          </Link>
+          <Link
+            href="/register"
+            className="h-8 px-4 rounded-[8px] text-[13px] font-semibold text-white hover:bg-zinc-700 transition-colors flex items-center"
+            style={{ background: "#18181b", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
+          >
+            免费开始使用
+          </Link>
+        </div>
+      </nav>
+
+      <section className="flex flex-col items-center text-center px-6 pt-24 pb-20">
+        <div
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[11.5px] font-semibold mb-8 text-zinc-600"
+          style={{ background: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.1)" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+          基于 GLM-4-Flash · pgvector · Next.js 16
+        </div>
+
+        <h1 className="text-[52px] font-bold leading-[1.1] tracking-tight text-[#0f0f10] max-w-2xl mb-5">
+          上传文档，即刻获得
+          <br />
+          <span className="text-zinc-900">精准 AI 问答</span>
+        </h1>
+
+        <p className="text-[16px] text-[#62636b] leading-relaxed max-w-md mb-10">
+          告别信息幻觉。所有回答来自你上传的文档，
+          <br />
+          每条答案精准标注来源段落，可追溯，可验证。
+        </p>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/register"
+            className="h-11 px-6 rounded-[10px] text-[14px] font-semibold text-white flex items-center gap-2 hover:bg-zinc-700 transition-all"
+            style={{ background: "#18181b", boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }}
+          >
+            免费开始使用
+            <ArrowRight size={15} strokeWidth={2.5} />
+          </Link>
+          <Link
+            href="/login"
+            className="h-11 px-6 rounded-[10px] border-[1.5px] border-[#ebebed] text-[14px] font-semibold text-[#62636b] hover:border-[#d0d0d8] hover:text-[#0f0f10] hover:bg-[#fafafa] transition-all flex items-center"
+          >
+            登录账户
+          </Link>
+        </div>
+      </section>
+
+      <section className="px-8 pb-20 max-w-4xl mx-auto w-full">
+        <div className="grid grid-cols-3 gap-4">
+          {FEATURES.map(({ icon: Icon, title, desc, color, bg }) => (
+            <div
+              key={title}
+              className="bg-white border border-[#ebebed] rounded-[12px] p-5 hover:border-zinc-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all"
+            >
+              <div className={`w-9 h-9 rounded-[9px] ${bg} flex items-center justify-center mb-4`}>
+                <Icon size={17} strokeWidth={1.8} className={color} />
+              </div>
+              <h3 className="text-[13.5px] font-semibold text-[#0f0f10] mb-1.5">{title}</h3>
+              <p className="text-[12.5px] text-[#62636b] leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-8 pb-24 max-w-4xl mx-auto w-full">
+        <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider mb-7">三步上手</p>
+        <div className="grid grid-cols-3 gap-8">
+          {STEPS.map(({ num, title, desc }) => (
+            <div key={num} className="flex gap-4">
+              <span className="text-[32px] font-bold text-[#ebebed] leading-none flex-shrink-0 tabular-nums">{num}</span>
+              <div>
+                <h3 className="text-[13.5px] font-semibold text-[#0f0f10] mb-1.5">{title}</h3>
+                <p className="text-[12.5px] text-[#62636b] leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <footer className="mt-auto border-t border-[#f0f0f3] px-8 h-12 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[12px] text-[#aaabb2]">
+          <Shield size={11} strokeWidth={2} />
+          © 2026 DocMind
+        </div>
+        <div className="flex items-center gap-4 text-[12px] text-[#aaabb2]">
+          <a href="https://github.com" className="hover:text-[#62636b] transition-colors">GitHub</a>
+          <span className="hover:text-[#62636b] transition-colors cursor-pointer">Privacy Policy</span>
+        </div>
+      </footer>
     </div>
-  );
+  )
 }
