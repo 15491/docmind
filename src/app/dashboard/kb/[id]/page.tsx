@@ -3,13 +3,14 @@
 import { use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Upload, Trash2, RotateCw, MessageSquare, FileText, Eye } from "lucide-react"
-import { DOC_TABLE_HEADERS } from "./constants"
+import { DOC_TABLE_HEADERS, MOCK_KB_NAMES } from "./constants"
 import { StatusBadge, PreviewPanel, DeleteDialog } from "./components"
 import { useDocList } from "./hooks"
 
 export default function KBDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete } = useDocList()
+  const kbName = MOCK_KB_NAMES[id] ?? "知识库"
+  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, fileInputRef, handleFileSelect } = useDocList()
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -23,7 +24,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
             控制台
           </Link>
           <span className="text-[#d8d8de]">/</span>
-          <h1 className="text-[13.5px] font-semibold text-[#0f0f10]">技术文档知识库</h1>
+          <h1 className="text-[13.5px] font-semibold text-[#0f0f10]">{kbName}</h1>
         </div>
         <Link
           href={`/dashboard/kb/${id}/chat`}
@@ -38,7 +39,8 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setDragging(false) }}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); handleFileSelect(e.dataTransfer.files) }}
+          onClick={() => fileInputRef.current?.click()}
           className={`border-[1.5px] border-dashed rounded-[12px] p-10 flex flex-col items-center gap-3 transition-all cursor-pointer ${
             dragging ? "border-zinc-400 bg-zinc-50" : "border-[#d8d8de] hover:border-zinc-400 hover:bg-zinc-50"
           }`}
@@ -54,6 +56,15 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
             <p className="text-[12px] text-[#aaabb2] mt-1">支持 PDF / Markdown / TXT · 最大 10MB</p>
           </div>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.md,.txt"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFileSelect(e.target.files)}
+        />
 
         {docs.length > 0 && (
           <div>
@@ -139,7 +150,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {previewDoc && (
-        <PreviewPanel doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+        <PreviewPanel doc={previewDoc} kbName={kbName} onClose={() => setPreviewDoc(null)} />
       )}
 
       {deleteDoc && (

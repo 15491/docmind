@@ -1,5 +1,10 @@
 export const DOC_TABLE_HEADERS = ["文件名", "大小", "状态", "上传时间", ""]
 
+export const MOCK_KB_NAMES: Record<string, string> = {
+  "1": "技术文档知识库",
+  "2": "学习笔记",
+}
+
 import type { DocStatus } from "./types"
 
 export const MOCK_DOCS = [

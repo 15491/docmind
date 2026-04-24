@@ -21,14 +21,14 @@ export function StatusBadge({ status }: { status: DocStatus }) {
   )
 }
 
-export function PreviewPanel({ doc, onClose }: { doc: Doc; onClose: () => void }) {
+export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () => void; kbName: string }) {
   const preview = MOCK_PREVIEW[doc.name]
   const ext = doc.name.split(".").pop()?.toLowerCase()
 
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-[480px] bg-white z-50 flex flex-col shadow-[-8px_0_32px_rgba(0,0,0,0.08)] border-l border-[#ebebed]">
+      <div className="fixed top-0 right-0 h-full w-[640px] bg-white z-50 flex flex-col shadow-[-8px_0_32px_rgba(0,0,0,0.08)] border-l border-[#ebebed]">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#ebebed] flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-[7px] bg-zinc-100 flex items-center justify-center flex-shrink-0">
@@ -49,7 +49,7 @@ export function PreviewPanel({ doc, onClose }: { doc: Doc; onClose: () => void }
         </div>
 
         <div className="flex items-center gap-1 px-5 py-2 border-b border-[#f5f5f7] flex-shrink-0">
-          <span className="text-[11px] text-[#aaabb2]">技术文档知识库</span>
+          <span className="text-[11px] text-[#aaabb2]">{kbName}</span>
           <ChevronRight size={11} className="text-[#d8d8de]" />
           <span className="text-[11px] text-[#62636b] font-medium">{doc.name}</span>
           <span className="ml-auto">

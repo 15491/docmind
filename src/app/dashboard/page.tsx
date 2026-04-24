@@ -14,7 +14,7 @@ import { RECENT_SESSIONS } from "./constants"
 import { useKbList } from "./hooks"
 
 export default function DashboardPage() {
-  const { kbs, open, setOpen, name, setName, handleCreate, handleDelete } = useKbList()
+  const { kbs, open, setOpen, name, setName, handleCreate, handleDelete, deleteKb, setDeleteKb, confirmDelete } = useKbList()
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -58,7 +58,7 @@ export default function DashboardPage() {
                 <MessageSquare size={13} strokeWidth={1.8} />
               </Link>
               <button
-                onClick={(e) => { e.preventDefault(); handleDelete(kb.id) }}
+                onClick={(e) => { e.preventDefault(); handleDelete(kb) }}
                 className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-red-50 hover:text-red-500 transition-colors"
                 title="删除"
               >
@@ -110,6 +110,35 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={!!deleteKb} onOpenChange={(v) => !v && setDeleteKb(null)}>
+        <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-[14px] font-semibold text-[#0f0f10]">删除知识库</DialogTitle>
+          </DialogHeader>
+          <div className="py-1">
+            <p className="text-[13px] text-[#62636b] leading-relaxed">
+              确定要删除{" "}
+              <span className="font-semibold text-[#0f0f10]">「{deleteKb?.name}」</span>{" "}
+              吗？该知识库下所有文档和向量索引将同步清除，此操作不可撤销。
+            </p>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setDeleteKb(null)}
+              className="h-8 px-3 text-[12.5px] font-medium text-[#aaabb2] hover:text-[#62636b] transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 transition-colors"
+            >
+              确认删除
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">

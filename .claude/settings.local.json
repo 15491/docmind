@@ -4,7 +4,10 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "Bash(pnpm build *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(awk -F/ '{$NF=\"\"; print}')",
+      "Bash(xargs grep *)",
+      "Bash(npm run *)"
     ]
   }
 }

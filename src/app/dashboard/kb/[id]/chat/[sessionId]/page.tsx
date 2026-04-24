@@ -4,11 +4,13 @@ import { use } from "react"
 import Link from "next/link"
 import { FileText, Send, Shield, Paperclip } from "lucide-react"
 import { SESSION_HISTORY, SESSION_TITLES } from "./constants"
+import { MOCK_KB_INFO } from "../constants"
 import { useChat } from "../hooks"
 import { AIAvatar } from "../components"
 
 export default function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = use(params)
+  const kbName = MOCK_KB_INFO[id]?.name ?? "知识库"
   const { messages, input, setInput, streaming, textareaRef, bottomRef, handleSend } = useChat(
     SESSION_HISTORY[sessionId] ?? []
   )
@@ -17,7 +19,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
     <>
       <header className="h-[52px] px-6 flex items-center justify-between border-b border-[#ebebed] flex-shrink-0 bg-white">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-shrink-0">技术文档知识库</span>
+          <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-shrink-0">{kbName}</span>
           <span className="text-[#d0d0d8] flex-shrink-0">/</span>
           <span className="text-[13px] text-[#62636b] truncate">{SESSION_TITLES[sessionId] ?? "历史会话"}</span>
         </div>
@@ -32,7 +34,9 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
       <div className="flex-1 overflow-y-auto py-8 flex flex-col gap-[22px] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#e8e8ec] [&::-webkit-scrollbar-thumb]:rounded-full">
         <div className="flex items-center gap-3 px-6">
           <div className="flex-1 h-px bg-[#f0f0f3]" />
-          <span className="text-[11px] text-[#aaabb2] font-medium">2026年4月23日</span>
+          <span className="text-[11px] text-[#aaabb2] font-medium">
+            {new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}
+          </span>
           <div className="flex-1 h-px bg-[#f0f0f3]" />
         </div>
 

@@ -52,26 +52,33 @@ export function IconNav() {
 
   return (
     <nav
-      className="flex-shrink-0 border-r border-[#ebebed] bg-white flex flex-col overflow-hidden z-10"
+      className="relative flex-shrink-0 border-r border-[#ebebed] bg-white flex flex-col z-10"
       style={{
         width: collapsed ? 52 : 220,
         transition: "width 0.2s cubic-bezier(0.4,0,0.2,1)",
+        overflow: "visible",
       }}
     >
       {/* ── 顶部 Logo 区 ── */}
-      <div className={`h-[52px] flex items-center flex-shrink-0 border-b border-[#f0f0f3] ${collapsed ? "justify-center" : "px-3 gap-2"}`}>
+      <div className={`h-[52px] flex items-center flex-shrink-0 border-b border-[#f0f0f3] overflow-hidden ${collapsed ? "justify-center" : "px-3 gap-2"}`}>
         {collapsed ? (
-          <button
-            type="button"
-            onClick={handleExpand}
-            title="展开菜单"
-            className="flex items-center justify-center gap-1.5 w-full h-full hover:bg-[#f3f3f5] transition-colors"
-          >
-            <div className="w-[24px] h-[24px] rounded-[6px] bg-zinc-900 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+          <>
+            <Link
+              href="/dashboard"
+              className="w-[28px] h-[28px] rounded-[7px] bg-zinc-900 flex items-center justify-center text-[12px] font-bold text-white hover:bg-zinc-700 transition-colors"
+            >
               D
-            </div>
-            <ChevronRight size={12} strokeWidth={2.5} className="text-[#b0b0b8]" />
-          </button>
+            </Link>
+            {/* 悬浮在右边框的展开 handle */}
+            <button
+              type="button"
+              onClick={handleExpand}
+              title="展开菜单"
+              className="absolute -right-[13px] top-[18px] w-[22px] h-[22px] rounded-full bg-white border border-[#e0e0e6] shadow-sm flex items-center justify-center text-[#aaabb2] hover:text-zinc-700 hover:border-zinc-300 hover:shadow-md transition-all z-20"
+            >
+              <ChevronRight size={11} strokeWidth={2.5} />
+            </button>
+          </>
         ) : (
           <>
             <Link
@@ -83,13 +90,14 @@ export function IconNav() {
             <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-1 whitespace-nowrap">
               DocMind
             </span>
+            {/* 悬浮在右边框的收起 handle */}
             <button
               type="button"
               onClick={handleCollapse}
               title="收起菜单"
-              className="w-6 h-6 rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-[#f3f3f5] hover:text-zinc-600 transition-colors flex-shrink-0"
+              className="absolute -right-[13px] top-[18px] w-[22px] h-[22px] rounded-full bg-white border border-[#e0e0e6] shadow-sm flex items-center justify-center text-[#aaabb2] hover:text-zinc-700 hover:border-zinc-300 hover:shadow-md transition-all z-20"
             >
-              <ChevronLeft size={14} strokeWidth={2.2} />
+              <ChevronLeft size={11} strokeWidth={2.5} />
             </button>
           </>
         )}

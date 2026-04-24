@@ -8,6 +8,7 @@ export function useKbList() {
   const [kbs, setKbs] = useState<Kb[]>(MOCK_KBS)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
+  const [deleteKb, setDeleteKb] = useState<Kb | null>(null)
 
   const handleCreate = () => {
     if (name.trim().length < 2) return
@@ -19,9 +20,13 @@ export function useKbList() {
     setOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    setKbs((prev) => prev.filter((k) => k.id !== id))
+  const handleDelete = (kb: Kb) => setDeleteKb(kb)
+
+  const confirmDelete = () => {
+    if (!deleteKb) return
+    setKbs((prev) => prev.filter((k) => k.id !== deleteKb.id))
+    setDeleteKb(null)
   }
 
-  return { kbs, open, setOpen, name, setName, handleCreate, handleDelete }
+  return { kbs, open, setOpen, name, setName, handleCreate, handleDelete, deleteKb, setDeleteKb, confirmDelete }
 }
