@@ -2,8 +2,9 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Search, Settings, ChevronLeft, ChevronRight } from "lucide-react"
-import { useState, useEffect } from "react"
+import { BookOpen, Search, Settings, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { useSession, signOut } from "next-auth/react"
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: BookOpen, label: "知识库" },
@@ -14,9 +15,21 @@ const AUTO_COLLAPSE_WIDTH = 1100
 
 export function IconNav() {
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [collapsed, setCollapsed] = useState(false)
-  // 记录用户是否手动展开过（防止宽屏自动展开覆盖用户折叠意图）
   const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null)
+  const [showLogout, setShowLogout] = useState(false)
+  const userRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userRef.current && !userRef.current.contains(e.target as Node)) {
+        setShowLogout(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const check = () => {
@@ -175,26 +188,45 @@ export function IconNav() {
         </Link>
 
         {/* 用户信息 */}
-        <div
-          title={collapsed ? "yc.bai" : undefined}
-          className={`flex items-center rounded-[8px] h-[34px] cursor-pointer hover:bg-[#f3f3f5] transition-colors whitespace-nowrap overflow-hidden ${
-            collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
-          }`}
-        >
-          <div className="w-[22px] h-[22px] rounded-full bg-zinc-900 flex items-center justify-center text-[9.5px] font-bold text-white flex-shrink-0">
-            白
-          </div>
+        <div ref={userRef} className="relative">
           <div
-            className="flex flex-col min-w-0"
-            style={{
-              opacity: collapsed ? 0 : 1,
-              width: collapsed ? 0 : "auto",
-              transition: "opacity 0.15s ease",
-            }}
+            title={collapsed ? (session?.user?.name ?? "用户") : undefined}
+            onClick={() => setShowLogout((v) => !v)}
+            className={`flex items-center rounded-[8px] h-[34px] cursor-pointer hover:bg-[#f3f3f5] transition-colors whitespace-nowrap overflow-hidden ${
+              collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
+            }`}
           >
-            <span className="text-[12.5px] font-semibold text-[#0f0f10] truncate leading-tight">yc.bai</span>
-            <span className="text-[10.5px] text-[#aaabb2] truncate leading-tight">免费计划</span>
+            <div className="w-[22px] h-[22px] rounded-full bg-zinc-900 flex items-center justify-center text-[9.5px] font-bold text-white flex-shrink-0">
+              {(session?.user?.name ?? session?.user?.email ?? "U")[0].toUpperCase()}
+            </div>
+            <div
+              className="flex flex-col min-w-0"
+              style={{
+                opacity: collapsed ? 0 : 1,
+                width: collapsed ? 0 : "auto",
+                transition: "opacity 0.15s ease",
+              }}
+            >
+              <span className="text-[12.5px] font-semibold text-[#0f0f10] truncate leading-tight">
+                {session?.user?.name ?? session?.user?.email ?? "用户"}
+              </span>
+              <span className="text-[10.5px] text-[#aaabb2] truncate leading-tight">免费计划</span>
+            </div>
           </div>
+
+          {/* 退出登录浮层 */}
+          {showLogout && (
+            <div className={`absolute bottom-full mb-1.5 bg-white border border-[#ebebed] rounded-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] py-1 z-50 ${collapsed ? "left-0" : "left-0 right-0"}`}>
+              <button
+                type="button"
+                onClick={() => signOut({ redirectTo: "/login" })}
+                className="w-full flex items-center gap-2.5 px-3 h-[34px] text-[13px] text-red-500 hover:bg-red-50 transition-colors rounded-[8px]"
+              >
+                <LogOut size={14} strokeWidth={2} />
+                退出登录
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>

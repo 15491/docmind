@@ -9,7 +9,7 @@ const INPUT_CLS = "w-full h-9 bg-white border-[1.5px] border-[#e2e2e8] rounded-[
 const LABEL_CLS = "block text-[11.5px] font-semibold text-[#62636b] mb-1.5 uppercase tracking-wide"
 
 export default function RegisterPage() {
-  const { form, set, handleSubmit } = useRegisterForm()
+  const { form, set, handleSubmit, handleSendCode, isPending, isSending, codeSent, cooldown } = useRegisterForm()
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4">
@@ -36,16 +36,40 @@ export default function RegisterPage() {
                 value={form.nickname}
                 onChange={set("nickname")}
                 className={INPUT_CLS}
+                required
               />
             </div>
             <div>
               <label className={LABEL_CLS}>邮箱</label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={set("email")}
+                  className={INPUT_CLS}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={isSending || cooldown > 0 || !form.email}
+                  className="flex-shrink-0 h-9 px-3 rounded-[8px] text-[12.5px] font-semibold border border-[#e2e2e8] text-[#55555e] hover:border-zinc-400 hover:text-zinc-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {isSending ? "发送中…" : cooldown > 0 ? `${cooldown}s` : codeSent ? "重新发送" : "发送验证码"}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className={LABEL_CLS}>验证码</label>
               <input
-                type="email"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={set("email")}
+                type="text"
+                placeholder="请输入 6 位验证码"
+                value={form.code}
+                onChange={set("code")}
                 className={INPUT_CLS}
+                maxLength={6}
+                required
               />
             </div>
             <div>
@@ -56,14 +80,17 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={set("password")}
                 className={INPUT_CLS}
+                required
+                minLength={8}
               />
             </div>
             <button
               type="submit"
-              className="block w-full h-9 rounded-[8px] text-white text-[13px] font-semibold hover:bg-zinc-700 transition-all mt-1"
+              disabled={isPending}
+              className="block w-full h-9 rounded-[8px] text-white text-[13px] font-semibold hover:bg-zinc-700 transition-all mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ background: "#18181b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
             >
-              创建账户
+              {isPending ? "注册中…" : "创建账户"}
             </button>
           </form>
 

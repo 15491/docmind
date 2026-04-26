@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google"
+import { Providers } from "@/components/providers"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -27,7 +29,8 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full`}>
       <body className="min-h-full font-sans bg-white text-[#0f0f10] antialiased">
-        {children}
+        <Providers>{children}</Providers>
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   )
