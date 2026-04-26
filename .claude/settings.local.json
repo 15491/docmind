@@ -7,7 +7,14 @@
       "Bash(node *)",
       "Bash(awk -F/ '{$NF=\"\"; print}')",
       "Bash(xargs grep *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "mcp__memory__open_nodes",
+      "Bash(npx prisma *)",
+      "Bash(npm install *)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"D:\\\\Code\\\\project\\\\docmind\\\\src\\\\app\\\\api\\\\auth\\\\send-code\")",
+      "Bash(Out-Null)"
     ]
   }
 }
