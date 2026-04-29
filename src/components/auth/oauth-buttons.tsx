@@ -31,14 +31,16 @@ export function OAuthButtons({ mode }: { mode: "登录" | "注册" }) {
         {GITHUB_ICON}
         GitHub {mode}
       </button>
-      <button
+      {/* Google 登录暂时隐藏：国内 Node.js 服务器无法直连 Google OAuth 接口，
+          待部署到海外服务器或配置服务端代理后再启用 */}
+      {/* <button
         type="button"
         className={BTN_CLS}
         onClick={() => signIn("google", { redirectTo: "/dashboard" })}
       >
         {GOOGLE_ICON}
         Google {mode}
-      </button>
+      </button> */}
     </div>
   )
 }

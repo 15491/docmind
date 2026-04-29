@@ -4,7 +4,11 @@ import Google from "next-auth/providers/google"
 
 // Lightweight config — no PrismaAdapter, safe to import in Edge Runtime (middleware)
 export const authConfig: NextAuthConfig = {
-  providers: [GitHub, Google],
+  providers: [
+    // 邮箱均经过平台强制验证，允许自动关联已有邮箱账号
+    GitHub({ allowDangerousEmailAccountLinking: true }),
+    Google({ allowDangerousEmailAccountLinking: true }),
+  ],
   pages: {
     signIn: "/login",
     error: "/login",

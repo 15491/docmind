@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react"
 import { signIn } from "next-auth/react"
+import { toast } from "sonner"
 import type { LoginForm } from "./types"
 
 export function useLoginForm() {
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" })
-  const [error, setError] = useState("")
   const [isPending, startTransition] = useTransition()
 
   const set = (field: keyof LoginForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -14,7 +14,6 @@ export function useLoginForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     startTransition(async () => {
       const result = await signIn("credentials", {
         email: form.email,
@@ -22,12 +21,12 @@ export function useLoginForm() {
         redirect: false,
       })
       if (result?.error) {
-        setError("邮箱或密码不正确")
+        toast.error("邮箱或密码不正确")
       } else {
         window.location.href = "/dashboard"
       }
     })
   }
 
-  return { form, set, handleSubmit, error, isPending }
+  return { form, set, handleSubmit, isPending }
 }

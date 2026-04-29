@@ -1,8 +1,9 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 import { AuthLogo } from "@/components/auth/auth-logo"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
 import { useLoginForm } from "./hooks"
@@ -18,10 +19,16 @@ const OAUTH_ERRORS: Record<string, string> = {
 }
 
 function LoginForm() {
-  const { form, set, handleSubmit, error, isPending } = useLoginForm()
+  const { form, set, handleSubmit, isPending } = useLoginForm()
   const searchParams = useSearchParams()
   const oauthError = searchParams.get("error")
-  const displayError = error || (oauthError ? (OAUTH_ERRORS[oauthError] ?? "登录失败，请重试") : "")
+
+  useEffect(() => {
+    if (oauthError) {
+      const msg = OAUTH_ERRORS[oauthError] ?? "登录失败，请重试"
+      toast.error(msg)
+    }
+  }, [oauthError])
 
   return (
     <div className="bg-white border border-[#ebebed] rounded-[14px] p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
@@ -34,12 +41,6 @@ function LoginForm() {
         <span className="text-[11px] font-medium text-[#aaabb2]">或</span>
         <div className="flex-1 h-px bg-[#f0f0f3]" />
       </div>
-
-      {displayError && (
-        <p className="text-[12.5px] text-red-500 bg-red-50 border border-red-100 rounded-[8px] px-3 py-2 mb-4">
-          {displayError}
-        </p>
-      )}
 
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div>

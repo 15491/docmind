@@ -14,7 +14,9 @@
       "Bash(npx prisma *)",
       "Bash(npm install *)",
       "Bash(New-Item -ItemType Directory -Force -Path \"D:\\\\Code\\\\project\\\\docmind\\\\src\\\\app\\\\api\\\\auth\\\\send-code\")",
-      "Bash(Out-Null)"
+      "Bash(Out-Null)",
+      "Bash(grep -v \"^$\")",
+      "Bash(pnpm remove *)"
     ]
   }
 }
