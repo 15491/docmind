@@ -3,26 +3,29 @@
 import { use } from "react"
 import Link from "next/link"
 import { FileText, Send, Shield, Paperclip, Upload, Sparkles } from "lucide-react"
-import { MOCK_KB_INFO, SUGGESTIONS } from "./constants"
+import { SUGGESTIONS } from "./constants"
 import { useChat } from "./hooks"
+import { useKbInfo } from "../../../hooks"
 import { AIAvatar } from "./components"
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const kb = MOCK_KB_INFO[id] ?? { name: "知识库", docCount: 0 }
-  const { messages, input, setInput, streaming, textareaRef, bottomRef, handleSend } = useChat()
+  const { kb } = useKbInfo(id)
+  const kbName = kb?.name ?? "知识库"
+  const docCount = kb?.documentCount ?? 0
+  const { messages, input, setInput, streaming, error, textareaRef, bottomRef, handleSend } = useChat(id)
 
   const header = (
     <header className="h-[52px] px-6 flex items-center justify-between border-b border-[#ebebed] flex-shrink-0 bg-white">
       <div className="flex items-center gap-2.5 min-w-0">
-        <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-shrink-0">{kb.name}</span>
-        {kb.docCount > 0 ? (
+        <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-shrink-0">{kbName}</span>
+        {docCount > 0 ? (
           <span
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold text-emerald-700 flex-shrink-0"
             style={{ background: "rgba(16,185,129,0.08)", borderColor: "rgba(16,185,129,0.22)" }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {kb.docCount} 篇文档
+            {docCount} 篇文档
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-200 text-[11px] font-semibold text-amber-600 flex-shrink-0 bg-amber-50">
@@ -40,7 +43,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     </header>
   )
 
-  if (kb.docCount === 0) {
+  if (docCount === 0) {
     return (
       <>
         {header}
@@ -78,7 +81,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
             </div>
             <div className="text-center">
               <p className="text-[15px] font-semibold text-[#0f0f10] mb-1.5">有什么想问的？</p>
-              <p className="text-[12.5px] text-[#aaabb2]">基于「{kb.name}」的 {kb.docCount} 篇文档回答</p>
+              <p className="text-[12.5px] text-[#aaabb2]">基于「{kbName}」的 {docCount} 篇文档回答</p>
             </div>
             <div className="flex flex-col gap-2 w-full max-w-sm">
               {SUGGESTIONS.map((s) => (
@@ -133,7 +136,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                             style={{ background: "rgba(16,185,129,0.08)", borderColor: "rgba(16,185,129,0.22)" }}
                           >
                             <FileText size={10} strokeWidth={2} className="text-emerald-500" />
-                            {s.name} · 第 {s.chunk} 段
+                            {s.fileName} · 第 {s.chunkIndex} 段
                           </span>
                         ))}
                       </div>

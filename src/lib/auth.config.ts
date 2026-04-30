@@ -13,9 +13,4 @@ export const authConfig: NextAuthConfig = {
     signIn: "/login",
     error: "/login",
   },
-  callbacks: {
-    authorized({ auth }) {
-      return !!auth
-    },
-  },
 }

@@ -2,8 +2,9 @@ export type DocStatus = "ready" | "processing" | "failed"
 
 export type Doc = {
   id: string
-  name: string
-  size: string
+  fileName: string
+  fileSize: number
   status: DocStatus
-  uploadedAt: string
+  chunkCount?: number
+  createdAt: string | Date
 }

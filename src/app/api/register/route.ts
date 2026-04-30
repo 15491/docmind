@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 12)
   await prisma.user.create({
-    data: { name: name.trim(), email, passwordHash },
+    data: { name: name.trim(), email, passwordHash, emailVerified: new Date() },
   })
 
   return NextResponse.json({ ok: true }, { status: 201 })

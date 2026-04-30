@@ -10,11 +10,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { RECENT_SESSIONS } from "./constants"
 import { useKbList } from "./hooks"
 
 export default function DashboardPage() {
-  const { kbs, open, setOpen, name, setName, handleCreate, handleDelete, deleteKb, setDeleteKb, confirmDelete } = useKbList()
+  const { kbs, loading, error, open, setOpen, name, setName, handleCreate, handleDelete, deleteKb, setDeleteKb, confirmDelete, creating, deleting } = useKbList()
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -22,6 +21,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-[15px] font-semibold text-[#0f0f10] tracking-tight">我的知识库</h1>
           <p className="text-[12px] text-[#aaabb2] mt-0.5">共 {kbs.length} 个</p>
+          {error && <p className="text-[12px] text-red-500 mt-1">{error}</p>}
         </div>
         <button
           onClick={() => setOpen(true)}
@@ -45,7 +45,7 @@ export default function DashboardPage() {
               {kb.name}
             </h3>
             <p className="text-[11.5px] text-[#aaabb2]">
-              {kb.docCount} 篇文档 · {kb.updatedAt}
+              {kb.documentCount} 篇文档 · {new Date(kb.createdAt).toLocaleDateString()}
             </p>
 
             <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -79,35 +79,27 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {kbs.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-48 gap-3">
-          <BookOpen size={28} strokeWidth={1.3} className="text-[#d0d0d8]" />
-          <p className="text-[13px] text-[#aaabb2]">还没有知识库，点击「新建知识库」开始</p>
+      {loading && (
+        <div className="px-8 pb-8">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white border border-[#ebebed] rounded-[10px] p-5 animate-pulse"
+              >
+                <div className="w-9 h-9 rounded-[8px] bg-[#f0f0f3] mb-4" />
+                <div className="h-4 bg-[#f0f0f3] rounded mb-2 w-3/4" />
+                <div className="h-3 bg-[#f0f0f3] rounded w-1/2" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {RECENT_SESSIONS.length > 0 && (
-        <div className="px-8 pb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock size={12} strokeWidth={2} className="text-[#c0c0c8]" />
-            <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider">最近对话</p>
-          </div>
-          <div className="space-y-1">
-            {RECENT_SESSIONS.map((s) => (
-              <Link
-                key={s.id}
-                href={`/dashboard/kb/${s.kbId}/chat/${s.id}`}
-                className="group flex items-center justify-between px-3.5 py-2.5 rounded-[9px] hover:bg-[#f5f5f7] transition-colors"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <MessageSquare size={13} strokeWidth={1.8} className="text-[#c0c0c8] flex-shrink-0" />
-                  <span className="text-[13px] text-[#35353d] truncate">{s.title}</span>
-                  <span className="text-[11.5px] text-[#c0c0c8] flex-shrink-0">· {s.kbName}</span>
-                </div>
-                <span className="text-[11.5px] text-[#c0c0c8] flex-shrink-0 ml-3 group-hover:text-[#aaabb2] transition-colors">{s.time}</span>
-              </Link>
-            ))}
-          </div>
+      {!loading && kbs.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-48 gap-3">
+          <BookOpen size={28} strokeWidth={1.3} className="text-[#d0d0d8]" />
+          <p className="text-[13px] text-[#aaabb2]">还没有知识库，点击「新建知识库」开始</p>
         </div>
       )}
 
@@ -132,9 +124,10 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={confirmDelete}
-              className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 transition-colors"
+              disabled={deleting}
+              className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
-              确认删除
+              {deleting ? "删除中..." : "确认删除"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -164,10 +157,10 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={handleCreate}
-              disabled={name.trim().length < 2}
+              disabled={name.trim().length < 2 || creating}
               className="h-8 px-4 rounded-[8px] bg-zinc-900 text-white text-[12.5px] font-semibold hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              创建
+              {creating ? "创建中..." : "创建"}
             </button>
           </DialogFooter>
         </DialogContent>

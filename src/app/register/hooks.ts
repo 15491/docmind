@@ -1,25 +1,43 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useCallback, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
 import type { RegisterForm } from "./types"
 
 export function useRegisterForm() {
+  const router = useRouter()
   const [form, setForm] = useState<RegisterForm>({ nickname: "", email: "", password: "", code: "" })
   const [codeSent, setCodeSent] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [showPassword, setShowPassword] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [isSending, startSending] = useTransition()
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
 
   const set = (field: keyof RegisterForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
+  const clear = useCallback((field: keyof RegisterForm) => {
+    setForm((prev) => ({ ...prev, [field]: "" }))
+  }, [])
+
   const startCooldown = () => {
     setCooldown(60)
-    const timer = setInterval(() => {
+    timerRef.current = setInterval(() => {
       setCooldown((c) => {
-        if (c <= 1) { clearInterval(timer); return 0 }
+        if (c <= 1) {
+          clearInterval(timerRef.current!)
+          timerRef.current = null
+          return 0
+        }
         return c - 1
       })
     }, 1000)
@@ -72,10 +90,11 @@ export function useRegisterForm() {
       if (result?.error) {
         toast.error("注册成功，但登录失败，请前往登录页")
       } else {
-        window.location.href = "/dashboard"
+        router.refresh()
+        router.push("/dashboard")
       }
     })
   }
 
-  return { form, set, handleSubmit, handleSendCode, isPending, isSending, codeSent, cooldown }
+  return { form, set, clear, showPassword, setShowPassword, handleSubmit, handleSendCode, isPending, isSending, codeSent, cooldown }
 }

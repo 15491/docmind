@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import type { Doc, DocStatus } from "./types"
-import { STATUS_MAP, MOCK_PREVIEW } from "./constants"
+import { STATUS_MAP } from "./constants"
 
 export function StatusBadge({ status }: { status: DocStatus }) {
   const { label, cls, dot } = STATUS_MAP[status]
@@ -22,8 +22,8 @@ export function StatusBadge({ status }: { status: DocStatus }) {
 }
 
 export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () => void; kbName: string }) {
-  const preview = MOCK_PREVIEW[doc.name]
-  const ext = doc.name.split(".").pop()?.toLowerCase()
+  const preview = null
+  const ext = doc.fileName.split(".").pop()?.toLowerCase()
 
   return (
     <>
@@ -35,8 +35,8 @@ export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () =
               <FileText size={13} strokeWidth={1.8} className="text-zinc-500" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-[#0f0f10] truncate">{doc.name}</p>
-              <p className="text-[11px] text-[#aaabb2]">{doc.size} · {doc.uploadedAt}上传</p>
+              <p className="text-[13px] font-semibold text-[#0f0f10] truncate">{doc.fileName}</p>
+              <p className="text-[11px] text-[#aaabb2]">{(doc.fileSize / 1024).toFixed(1)}KB · {new Date(doc.createdAt).toLocaleString()}上传</p>
             </div>
           </div>
           <button
@@ -51,7 +51,7 @@ export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () =
         <div className="flex items-center gap-1 px-5 py-2 border-b border-[#f5f5f7] flex-shrink-0">
           <span className="text-[11px] text-[#aaabb2]">{kbName}</span>
           <ChevronRight size={11} className="text-[#d8d8de]" />
-          <span className="text-[11px] text-[#62636b] font-medium">{doc.name}</span>
+          <span className="text-[11px] text-[#62636b] font-medium">{doc.fileName}</span>
           <span className="ml-auto">
             <StatusBadge status={doc.status} />
           </span>
@@ -121,7 +121,7 @@ export function DeleteDialog({
         <div className="py-1">
           <p className="text-[13px] text-[#62636b] leading-relaxed">
             确定要删除{" "}
-            <span className="font-semibold text-[#0f0f10] font-mono">{doc.name}</span>{" "}
+            <span className="font-semibold text-[#0f0f10] font-mono">{doc.fileName}</span>{" "}
             吗？删除后该文档的向量索引将同步清除，此操作不可撤销。
           </p>
         </div>

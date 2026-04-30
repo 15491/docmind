@@ -29,7 +29,7 @@ export async function sendVerifyCode(purpose: VerifyPurpose, email: string) {
     }
   }
 
-  const code = String(Math.floor(100000 + Math.random() * 900000))
+  const code = String(crypto.randomInt(100000, 1000000))
   const record: CodeRecord = { code, attempts: 0, sentAt: Math.floor(Date.now() / 1000) }
   await redis.setex(k, TTL, JSON.stringify(record))
 

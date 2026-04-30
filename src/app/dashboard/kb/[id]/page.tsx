@@ -3,14 +3,16 @@
 import { use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Upload, Trash2, RotateCw, MessageSquare, FileText, Eye } from "lucide-react"
-import { DOC_TABLE_HEADERS, MOCK_KB_NAMES } from "./constants"
+import { DOC_TABLE_HEADERS } from "./constants"
 import { StatusBadge, PreviewPanel, DeleteDialog } from "./components"
 import { useDocList } from "./hooks"
+import { useKbInfo } from "../../hooks"
 
 export default function KBDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const kbName = MOCK_KB_NAMES[id] ?? "知识库"
-  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, fileInputRef, handleFileSelect } = useDocList()
+  const { kb } = useKbInfo(id)
+  const kbName = kb?.name ?? "知识库"
+  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, fileInputRef, handleFileSelect, loading, error } = useDocList(id)
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -36,6 +38,12 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
       </div>
 
       <div className="px-8 py-6 space-y-6">
+        {error && (
+          <div className="p-4 rounded-[8px] bg-red-50 border border-red-200">
+            <p className="text-[12px] text-red-700">{error}</p>
+          </div>
+        )}
+
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
@@ -98,13 +106,13 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
                         >
                           <FileText size={14} strokeWidth={1.8} className="text-[#c0c0c8] flex-shrink-0" />
                           <span className="text-[13px] font-medium text-[#35353d] group-hover/name:text-zinc-900 group-hover/name:underline underline-offset-2 transition-colors">
-                            {doc.name}
+                            {doc.fileName}
                           </span>
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{doc.size}</td>
+                      <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{(doc.fileSize / 1024).toFixed(1)}KB</td>
                       <td className="px-4 py-3"><StatusBadge status={doc.status} /></td>
-                      <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{doc.uploadedAt}</td>
+                      <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{new Date(doc.createdAt).toLocaleString()}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           {doc.status !== "processing" && (

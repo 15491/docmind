@@ -16,7 +16,12 @@
       "Bash(New-Item -ItemType Directory -Force -Path \"D:\\\\Code\\\\project\\\\docmind\\\\src\\\\app\\\\api\\\\auth\\\\send-code\")",
       "Bash(Out-Null)",
       "Bash(grep -v \"^$\")",
-      "Bash(pnpm remove *)"
+      "Bash(pnpm remove *)",
+      "Bash(npx tsc *)",
+      "Bash(2>&1)",
+      "Bash(npx tsx --tsconfig tsconfig.json -e ' *)",
+      "Bash(docker exec pgsql *)",
+      "mcp__memory__search_nodes"
     ]
   }
 }

@@ -189,10 +189,11 @@ export function IconNav() {
 
         {/* 用户信息 */}
         <div ref={userRef} className="relative">
-          <div
+          <button
+            type="button"
             title={collapsed ? (session?.user?.name ?? "用户") : undefined}
             onClick={() => setShowLogout((v) => !v)}
-            className={`flex items-center rounded-[8px] h-[34px] cursor-pointer hover:bg-[#f3f3f5] transition-colors whitespace-nowrap overflow-hidden ${
+            className={`w-full flex items-center rounded-[8px] h-[34px] cursor-pointer hover:bg-[#f3f3f5] transition-colors whitespace-nowrap overflow-hidden ${
               collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
             }`}
           >
@@ -212,9 +213,7 @@ export function IconNav() {
               </span>
               <span className="text-[10.5px] text-[#aaabb2] truncate leading-tight">免费计划</span>
             </div>
-          </div>
-
-          {/* 退出登录浮层 */}
+          </button>
           {showLogout && (
             <div className={`absolute bottom-full mb-1.5 bg-white border border-[#ebebed] rounded-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] py-1 z-50 ${collapsed ? "left-0" : "left-0 right-0"}`}>
               <button

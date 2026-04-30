@@ -30,8 +30,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === "COOLDOWN")
       return NextResponse.json({ error: err.message }, { status: 429 })
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error("[send-code]", msg)
-    return NextResponse.json({ error: `发送失败：${msg}` }, { status: 500 })
+    console.error("[send-code]", err instanceof Error ? err.message : String(err))
+    return NextResponse.json({ error: "发送失败，请稍后重试" }, { status: 500 })
   }
 }

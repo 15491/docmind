@@ -2,14 +2,13 @@
 
 import { Suspense, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { AuthLogo } from "@/components/auth/auth-logo"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
+import { EyeIcon, ClearIcon, INPUT_CLS, LABEL_CLS, ICON_BTN_CLS } from "@/components/auth/form-ui"
 import { useLoginForm } from "./hooks"
-
-const INPUT_CLS = "w-full h-9 bg-white border-[1.5px] border-[#e2e2e8] rounded-[8px] px-3 text-[13px] text-[#0f0f10] placeholder:text-[#c8c8d0] outline-none focus:border-zinc-700 focus:shadow-[0_0_0_3px_rgba(0,0,0,0.07)] transition-all font-sans"
-const LABEL_CLS = "block text-[11.5px] font-semibold text-[#62636b] mb-1.5 uppercase tracking-wide"
 
 const OAUTH_ERRORS: Record<string, string> = {
   OAuthAccountNotLinked: "该邮箱已通过其他方式注册，请使用原始登录方式",
@@ -19,16 +18,18 @@ const OAUTH_ERRORS: Record<string, string> = {
 }
 
 function LoginForm() {
-  const { form, set, handleSubmit, isPending } = useLoginForm()
+  const { form, set, clear, showPassword, setShowPassword, handleSubmit, isPending } = useLoginForm()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const oauthError = searchParams.get("error")
 
   useEffect(() => {
     if (oauthError) {
       const msg = OAUTH_ERRORS[oauthError] ?? "登录失败，请重试"
       toast.error(msg)
+      router.replace("/login")
     }
-  }, [oauthError])
+  }, [oauthError, router])
 
   return (
     <div className="bg-white border border-[#ebebed] rounded-[14px] p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
@@ -45,25 +46,44 @@ function LoginForm() {
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div>
           <label className={LABEL_CLS}>邮箱</label>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={form.email}
-            onChange={set("email")}
-            className={INPUT_CLS}
-            required
-          />
+          <div className="relative">
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={set("email")}
+              className={INPUT_CLS}
+              required
+            />
+            {form.email && (
+              <button type="button" onClick={() => clear("email")} className={`absolute right-2 top-1/2 -translate-y-1/2 ${ICON_BTN_CLS}`} tabIndex={-1}>
+                <ClearIcon />
+              </button>
+            )}
+          </div>
         </div>
         <div>
           <label className={LABEL_CLS}>密码</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={form.password}
-            onChange={set("password")}
-            className={INPUT_CLS}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={form.password}
+              onChange={set("password")}
+              className={INPUT_CLS}
+              required
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {form.password && (
+                <button type="button" onClick={() => clear("password")} className={ICON_BTN_CLS} tabIndex={-1}>
+                  <ClearIcon />
+                </button>
+              )}
+              <button type="button" onClick={() => setShowPassword((v) => !v)} className={ICON_BTN_CLS} tabIndex={-1}>
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
+          </div>
         </div>
         <button
           type="submit"
@@ -97,3 +117,5 @@ export default function LoginPage() {
     </div>
   )
 }
+
+

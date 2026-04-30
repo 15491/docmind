@@ -3,13 +3,11 @@
 import Link from "next/link"
 import { AuthLogo } from "@/components/auth/auth-logo"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
+import { EyeIcon, ClearIcon, INPUT_CLS, LABEL_CLS, ICON_BTN_CLS } from "@/components/auth/form-ui"
 import { useRegisterForm } from "./hooks"
 
-const INPUT_CLS = "w-full h-9 bg-white border-[1.5px] border-[#e2e2e8] rounded-[8px] px-3 text-[13px] text-[#0f0f10] placeholder:text-[#c8c8d0] outline-none focus:border-zinc-700 focus:shadow-[0_0_0_3px_rgba(0,0,0,0.07)] transition-all font-sans"
-const LABEL_CLS = "block text-[11.5px] font-semibold text-[#62636b] mb-1.5 uppercase tracking-wide"
-
 export default function RegisterPage() {
-  const { form, set, handleSubmit, handleSendCode, isPending, isSending, codeSent, cooldown } = useRegisterForm()
+  const { form, set, clear, showPassword, setShowPassword, handleSubmit, handleSendCode, isPending, isSending, codeSent, cooldown } = useRegisterForm()
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4">
@@ -30,26 +28,40 @@ export default function RegisterPage() {
           <form className="space-y-3" onSubmit={handleSubmit}>
             <div>
               <label className={LABEL_CLS}>昵称</label>
-              <input
-                type="text"
-                placeholder="你的名字"
-                value={form.nickname}
-                onChange={set("nickname")}
-                className={INPUT_CLS}
-                required
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="你的名字"
+                  value={form.nickname}
+                  onChange={set("nickname")}
+                  className={INPUT_CLS}
+                  required
+                />
+                {form.nickname && (
+                  <button type="button" onClick={() => clear("nickname")} className={`absolute right-2 top-1/2 -translate-y-1/2 ${ICON_BTN_CLS}`} tabIndex={-1}>
+                    <ClearIcon />
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className={LABEL_CLS}>邮箱</label>
               <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={form.email}
-                  onChange={set("email")}
-                  className={INPUT_CLS}
-                  required
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={form.email}
+                    onChange={set("email")}
+                    className={INPUT_CLS}
+                    required
+                  />
+                  {form.email && (
+                    <button type="button" onClick={() => clear("email")} className={`absolute right-2 top-1/2 -translate-y-1/2 ${ICON_BTN_CLS}`} tabIndex={-1}>
+                      <ClearIcon />
+                    </button>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleSendCode}
@@ -62,27 +74,46 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className={LABEL_CLS}>验证码</label>
-              <input
-                type="text"
-                placeholder="请输入 6 位验证码"
-                value={form.code}
-                onChange={set("code")}
-                className={INPUT_CLS}
-                maxLength={6}
-                required
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="请输入 6 位验证码"
+                  value={form.code}
+                  onChange={set("code")}
+                  className={INPUT_CLS}
+                  maxLength={6}
+                  required
+                />
+                {form.code && (
+                  <button type="button" onClick={() => clear("code")} className={`absolute right-2 top-1/2 -translate-y-1/2 ${ICON_BTN_CLS}`} tabIndex={-1}>
+                    <ClearIcon />
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className={LABEL_CLS}>密码</label>
-              <input
-                type="password"
-                placeholder="至少 8 位"
-                value={form.password}
-                onChange={set("password")}
-                className={INPUT_CLS}
-                required
-                minLength={8}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="至少 8 位"
+                  value={form.password}
+                  onChange={set("password")}
+                  className={INPUT_CLS}
+                  required
+                  minLength={8}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {form.password && (
+                    <button type="button" onClick={() => clear("password")} className={ICON_BTN_CLS} tabIndex={-1}>
+                      <ClearIcon />
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className={ICON_BTN_CLS} tabIndex={-1}>
+                    <EyeIcon open={showPassword} />
+                  </button>
+                </div>
+              </div>
             </div>
             <button
               type="submit"
@@ -105,3 +136,4 @@ export default function RegisterPage() {
     </div>
   )
 }
+

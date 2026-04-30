@@ -3,17 +3,15 @@
 import { use } from "react"
 import Link from "next/link"
 import { FileText, Send, Shield, Paperclip } from "lucide-react"
-import { SESSION_HISTORY, SESSION_TITLES } from "./constants"
-import { MOCK_KB_INFO } from "../constants"
 import { useChat } from "../hooks"
+import { useKbInfo } from "../../../../hooks"
 import { AIAvatar } from "../components"
 
 export default function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = use(params)
-  const kbName = MOCK_KB_INFO[id]?.name ?? "知识库"
-  const { messages, input, setInput, streaming, textareaRef, bottomRef, handleSend } = useChat(
-    SESSION_HISTORY[sessionId] ?? []
-  )
+  const { kb } = useKbInfo(id)
+  const kbName = kb?.name ?? "知识库"
+  const { messages, input, setInput, streaming, textareaRef, bottomRef, handleSend } = useChat(id, sessionId)
 
   return (
     <>
@@ -21,7 +19,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-shrink-0">{kbName}</span>
           <span className="text-[#d0d0d8] flex-shrink-0">/</span>
-          <span className="text-[13px] text-[#62636b] truncate">{SESSION_TITLES[sessionId] ?? "历史会话"}</span>
+          <span className="text-[13px] text-[#62636b] truncate">会话</span>
         </div>
         <Link
           href={`/dashboard/kb/${id}`}
@@ -70,7 +68,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
                             style={{ background: "rgba(16,185,129,0.08)", borderColor: "rgba(16,185,129,0.22)" }}
                           >
                             <FileText size={10} strokeWidth={2} className="text-emerald-500" />
-                            {s.name} · 第 {s.chunk} 段
+                            {s.fileName} · 第 {s.chunkIndex} 段
                           </span>
                         ))}
                       </div>
