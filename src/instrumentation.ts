@@ -1,21 +1,32 @@
 // Next.js Instrumentation API — 在应用启动时执行
 // https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
 
-import { join } from 'path'
-
 export async function register() {
-  // 设置临时文件目录环境变量（如果未设置）
-  if (!process.env.TEMP_DIR && process.env.NEXT_RUNTIME === 'nodejs') {
-    process.env.TEMP_DIR = join(process.cwd(), '.temp')
-    console.log(`[Instrumentation] Set TEMP_DIR to: ${process.env.TEMP_DIR}`)
-  }
-
-  // 仅在 nodejs runtime 启动 Worker
-  // Edge runtime 不支持长时间运行的后台进程
+  // 仅在 nodejs runtime 执行
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { startWorker } = await import('@/lib/worker')
+    // 初始化 MinIO
     try {
+      const { ensureBucket } = await import('@/lib/minio')
+      await ensureBucket()
+      console.log('[Instrumentation] MinIO bucket initialized')
+    } catch (error) {
+      console.error('[Instrumentation] Failed to initialize MinIO:', error)
+    }
+
+    // 初始化 Elasticsearch
+    try {
+      const { ensureIndex } = await import('@/lib/elasticsearch')
+      await ensureIndex()
+      console.log('[Instrumentation] Elasticsearch index initialized')
+    } catch (error) {
+      console.error('[Instrumentation] Failed to initialize Elasticsearch:', error)
+    }
+
+    // 启动 Worker
+    try {
+      const { startWorker } = await import('@/lib/worker')
       await startWorker()
+      console.log('[Instrumentation] Worker started')
     } catch (error) {
       console.error('[Instrumentation] Failed to start worker:', error)
     }

@@ -24,7 +24,10 @@
       "mcp__memory__search_nodes",
       "mcp__memory__read_graph",
       "mcp__ide__getDiagnostics",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(pnpm add *)"
     ]
   }
 }

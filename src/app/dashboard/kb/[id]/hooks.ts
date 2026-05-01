@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
+import { http, ApiError } from "@/lib/request"
 import type { Doc } from "./types"
 
 export function useDocList(kbId: string) {
@@ -19,15 +20,15 @@ export function useDocList(kbId: string) {
 
   const fetchDocs = useCallback(async () => {
     try {
-      const response = await fetch(`/api/documents/status?kbId=${kbId}`)
-      if (!response.ok) throw new Error('Failed to fetch documents')
-      const data = await response.json() as { documents: Doc[]; nextCursor: string | null }
+      const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
+        `/api/documents/status?kbId=${kbId}`
+      )
       setDocs(data.documents)
       setNextCursor(data.nextCursor ?? null)
       setError(null)
       return data.documents.some((d) => d.status === 'processing')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch documents')
+      setError(err instanceof ApiError ? err.message : '获取文档失败')
       return false
     }
   }, [kbId])
@@ -36,13 +37,13 @@ export function useDocList(kbId: string) {
     if (!nextCursor || loadingMore) return
     try {
       setLoadingMore(true)
-      const response = await fetch(`/api/documents/status?kbId=${kbId}&cursor=${nextCursor}`)
-      if (!response.ok) throw new Error('Failed to fetch documents')
-      const data = await response.json() as { documents: Doc[]; nextCursor: string | null }
+      const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
+        `/api/documents/status?kbId=${kbId}&cursor=${nextCursor}`
+      )
       setDocs((prev) => [...prev, ...data.documents])
       setNextCursor(data.nextCursor ?? null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load more documents')
+      setError(err instanceof ApiError ? err.message : '加载更多文档失败')
     } finally {
       setLoadingMore(false)
     }
@@ -104,17 +105,7 @@ export function useDocList(kbId: string) {
         formData.append('kbId', kbId)
 
         try {
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!response.ok) {
-            const errData = await response.json() as { message?: string }
-            throw new Error(errData.message || 'Upload failed')
-          }
-
-          const data = await response.json() as { document: Doc }
+          const data = await http.upload<{ document: Doc }>('/api/upload', formData)
           setDocs((prev) => [data.document, ...prev])
           startPolling() // 上传成功后确保轮询在运行
         } catch (err) {
@@ -124,10 +115,22 @@ export function useDocList(kbId: string) {
 
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(err instanceof ApiError ? err.message : '上传失败')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const onRetry = async (docId: string) => {
+    try {
+      setError(null)
+      await http.post(`/api/documents/${docId}/retry`)
+      setDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: 'processing' } : d))
+      stopPolling()
+      startPolling()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '重试失败')
     }
   }
 
@@ -136,13 +139,12 @@ export function useDocList(kbId: string) {
     try {
       setDeleting(true)
       setError(null)
-      const response = await fetch(`/api/documents/${deleteDoc.id}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Failed to delete document')
+      await http.del(`/api/documents/${deleteDoc.id}`)
       setDocs((prev) => prev.filter((d) => d.id !== deleteDoc.id))
       if (previewDoc?.id === deleteDoc.id) setPreviewDoc(null)
       setDeleteDoc(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete document')
+      setError(err instanceof ApiError ? err.message : '删除文档失败')
     } finally {
       setDeleting(false)
     }
@@ -153,7 +155,7 @@ export function useDocList(kbId: string) {
     dragging, setDragging,
     previewDoc, setPreviewDoc,
     deleteDoc, setDeleteDoc,
-    handleDelete, fileInputRef, handleFileSelect,
+    handleDelete, onRetry, fileInputRef, handleFileSelect,
     uploading, deleting,
   }
 }

@@ -1,20 +1,21 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { http } from "@/lib/request"
 import type { Message } from "./types"
 
 export function useChat(kbId: string, sessionId?: string, initialMessages: Message[] = []) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (sessionId && messages.length === 0) {
-      fetch(`/api/sessions/${sessionId}/messages`)
-        .then(r => r.json())
+      http.get<{ messages: Message[] }>(`/api/sessions/${sessionId}/messages`)
         .then(data => setMessages(data.messages ?? []))
         .catch(err => setError(err instanceof Error ? err.message : 'Failed to load messages'))
     }
@@ -40,15 +41,11 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
       if (textareaRef.current) textareaRef.current.style.height = "auto"
       setStreaming(true)
 
-      // 发起 SSE 请求
+      // 发起 SSE 请求 — keep as raw fetch (streaming)
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: content,
-          kbId,
-          sessionId,
-        }),
+        body: JSON.stringify({ question: content, kbId, sessionId }),
       })
 
       if (!response.ok) {
@@ -76,7 +73,11 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
         while (i < lines.length) {
           const line = lines[i]
 
-          if (line.startsWith('event: chunk')) {
+          if (line.startsWith('event: tool_call')) {
+            setSearching(true)
+            i += 2
+          } else if (line.startsWith('event: chunk')) {
+            setSearching(false)
             const dataLine = lines[i + 1]
             if (dataLine?.startsWith('data: ')) {
               try {
@@ -123,13 +124,15 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
       }
 
       setStreaming(false)
+      setSearching(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message')
       setStreaming(false)
+      setSearching(false)
     }
   }
 
-  return { messages, input, setInput, streaming, error, textareaRef, bottomRef, handleSend }
+  return { messages, input, setInput, streaming, searching, error, textareaRef, bottomRef, handleSend }
 }
 
 interface Session {
@@ -175,9 +178,9 @@ export function useSessionList(kbId: string) {
   const fetchSessions = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/sessions?kbId=${kbId}`)
-      if (!response.ok) throw new Error('Failed to fetch sessions')
-      const data = await response.json() as { sessions: Session[]; nextCursor: string | null }
+      const data = await http.get<{ sessions: Session[]; nextCursor: string | null }>(
+        `/api/sessions?kbId=${kbId}`
+      )
       setSessions(data.sessions ?? [])
       setGrouped(groupSessionsByDate(data.sessions ?? []))
       setNextCursor(data.nextCursor ?? null)
@@ -192,9 +195,9 @@ export function useSessionList(kbId: string) {
     if (!nextCursor || loadingMore) return
     try {
       setLoadingMore(true)
-      const response = await fetch(`/api/sessions?kbId=${kbId}&cursor=${nextCursor}`)
-      if (!response.ok) throw new Error('Failed to fetch sessions')
-      const data = await response.json() as { sessions: Session[]; nextCursor: string | null }
+      const data = await http.get<{ sessions: Session[]; nextCursor: string | null }>(
+        `/api/sessions?kbId=${kbId}&cursor=${nextCursor}`
+      )
       const merged = [...sessions, ...(data.sessions ?? [])]
       setSessions(merged)
       setGrouped(groupSessionsByDate(merged))

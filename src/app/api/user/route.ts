@@ -1,19 +1,19 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { R, Err } from '@/lib/response'
 
 // GET /api/user — 获取当前登录用户信息
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+  if (!session?.user?.id) return Err.unauthorized()
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true, name: true, email: true, image: true, passwordHash: true, zhipuApiKey: true },
   })
-  if (!user) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+  if (!user) return Err.notFound('NOT_FOUND')
 
-  return NextResponse.json({
+  return R.ok({
     user: {
       id: user.id,
       name: user.name,
@@ -28,14 +28,14 @@ export async function GET() {
 // PATCH /api/user — 更新昵称 / API Key
 export async function PATCH(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+  if (!session?.user?.id) return Err.unauthorized()
 
   const body = await req.json()
   const { name, zhipuApiKey } = body as { name?: string; zhipuApiKey?: string }
 
   const data: Record<string, string> = {}
   if (name !== undefined) {
-    if (!name.trim()) return NextResponse.json({ error: '昵称不能为空' }, { status: 422 })
+    if (!name.trim()) return Err.invalid('昵称不能为空')
     data.name = name.trim()
   }
   if (zhipuApiKey !== undefined) {
@@ -43,7 +43,7 @@ export async function PATCH(req: Request) {
   }
 
   if (Object.keys(data).length === 0)
-    return NextResponse.json({ error: '无可更新字段' }, { status: 422 })
+    return Err.invalid('无可更新字段')
 
   const user = await prisma.user.update({
     where: { id: session.user.id },
@@ -51,15 +51,15 @@ export async function PATCH(req: Request) {
     select: { id: true, name: true, email: true },
   })
 
-  return NextResponse.json({ user })
+  return R.ok({ user })
 }
 
 // DELETE /api/user — 注销账户（删除所有数据）
 export async function DELETE() {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+  if (!session?.user?.id) return Err.unauthorized()
 
   await prisma.user.delete({ where: { id: session.user.id } })
 
-  return NextResponse.json({ ok: true })
+  return R.noData()
 }

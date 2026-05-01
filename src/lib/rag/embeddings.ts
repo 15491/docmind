@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { searchChunks as searchEsChunks } from '@/lib/elasticsearch'
 
 // 调用智谱AI Embedding API，获取文本向量
 export async function embedText(text: string, apiKey?: string | null): Promise<number[]> {
@@ -49,7 +49,7 @@ interface SearchResult {
   similarity: number
 }
 
-// 使用 pgvector 向量相似度检索文档 chunks
+// 使用 Elasticsearch 向量相似度检索文档 chunks
 export async function searchVectors(props: {
   embedding: number[]
   kbId: string
@@ -57,22 +57,17 @@ export async function searchVectors(props: {
 }): Promise<SearchResult[]> {
   const { embedding, kbId, topK = 5 } = props
 
-  // 将向量转换为 pgvector 格式字符串 [0.1, 0.2, ...]
-  const vectorString = `[${embedding.join(',')}]`
+  const results = await searchEsChunks({
+    embedding,
+    kbId,
+    topK,
+  })
 
-  const results = await prisma.$queryRaw<SearchResult[]>`
-    SELECT
-      dc.id,
-      dc.content,
-      d."fileName",
-      dc."chunkIndex",
-      (1 - (dc.embedding <=> ${vectorString}::vector)) AS similarity
-    FROM "DocumentChunk" dc
-    JOIN "Document" d ON d.id = dc."documentId"
-    WHERE d."knowledgeBaseId" = ${kbId} AND d.status = 'ready'
-    ORDER BY dc.embedding <=> ${vectorString}::vector ASC
-    LIMIT ${topK}
-  `
-
-  return results
+  return results.map((r) => ({
+    id: r.id,
+    content: r.content,
+    fileName: r.fileName,
+    chunkIndex: r.chunkIndex,
+    similarity: r.similarity,
+  }))
 }

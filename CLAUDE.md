@@ -66,11 +66,19 @@ Shared sub-routes reuse from parent: `[sessionId]/page.tsx` imports `useChat` fr
 
 ### Client vs Server components
 
-All pages are currently `"use client"` — no server-side data fetching exists yet. Layouts that use hooks (`usePathname`, `use(params)`) are also marked `"use client"`.
+All pages are `"use client"` — no server-side data fetching. Layouts that use hooks (`usePathname`, `use(params)`) are also marked `"use client"`.
 
-## Pending for API integration phase
+## Backend services
 
-- Replace `// TODO: call API` stubs in all `hooks.ts` files
-- Add `not-found.tsx` to dynamic routes (`[id]`, `[sessionId]`) first
-- Then `error.tsx` under `dashboard/` for API failure boundaries
-- Then `loading.tsx` for routes with visible fetch latency
+The app requires these running services (see `.env.example`):
+
+- **PostgreSQL** — primary database (Prisma ORM)
+- **Redis** — BullMQ job queue + rate limiting
+- **MinIO** — document object storage
+- **Elasticsearch** — vector/KNN search (index: `docmind-chunks`, 2048-dim cosine)
+- **Zhipu AI** — GLM-4-Flash (chat) + embedding-3 (vectors)
+- **Resend** — transactional email (verification codes, password reset)
+
+On startup (`instrumentation.ts`), the app auto-creates the MinIO bucket and Elasticsearch index if missing, then starts the BullMQ worker.
+
+Run the worker standalone in production: `pnpm worker`

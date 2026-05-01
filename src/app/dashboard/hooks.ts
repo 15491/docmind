@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { http, ApiError } from "@/lib/request"
 import type { Kb } from "./types"
 
 export function useKbList() {
@@ -19,12 +20,10 @@ export function useKbList() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch('/api/kb')
-        if (!response.ok) throw new Error('Failed to fetch knowledge bases')
-        const data = await response.json() as { kbs: Kb[] }
+        const data = await http.get<{ kbs: Kb[] }>('/api/kb')
         setKbs(data.kbs)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error')
+        setError(err instanceof ApiError ? err.message : '获取知识库失败')
       } finally {
         setLoading(false)
       }
@@ -37,18 +36,12 @@ export function useKbList() {
     try {
       setCreating(true)
       setError(null)
-      const response = await fetch('/api/kb', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
-      })
-      if (!response.ok) throw new Error('Failed to create knowledge base')
-      const data = await response.json() as { kb: Kb }
+      const data = await http.post<{ kb: Kb }>('/api/kb', { name: name.trim() })
       setKbs((prev) => [data.kb, ...prev])
       setName("")
       setOpen(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create knowledge base')
+      setError(err instanceof ApiError ? err.message : '创建知识库失败')
     } finally {
       setCreating(false)
     }
@@ -61,14 +54,11 @@ export function useKbList() {
     try {
       setDeleting(true)
       setError(null)
-      const response = await fetch(`/api/kb/${deleteKb.id}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) throw new Error('Failed to delete knowledge base')
+      await http.del(`/api/kb/${deleteKb.id}`)
       setKbs((prev) => prev.filter((k) => k.id !== deleteKb.id))
       setDeleteKb(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete knowledge base')
+      setError(err instanceof ApiError ? err.message : '删除知识库失败')
     } finally {
       setDeleting(false)
     }
@@ -102,12 +92,10 @@ export function useKbInfo(kbId: string) {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`/api/kb/${kbId}`)
-        if (!response.ok) throw new Error('Failed to fetch knowledge base')
-        const data = await response.json() as { kb: Kb }
+        const data = await http.get<{ kb: Kb }>(`/api/kb/${kbId}`)
         setKb(data.kb)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error')
+        setError(err instanceof ApiError ? err.message : '获取知识库失败')
       } finally {
         setLoading(false)
       }

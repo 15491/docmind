@@ -7,7 +7,7 @@ export interface DocumentJob {
   userId: string
   fileName: string
   mimeType: string
-  filePath: string // 临时文件路径，worker 处理后自动删除
+  objectKey: string // MinIO 对象存储路径
 }
 
 // 初始化文档处理队列
@@ -18,7 +18,6 @@ export const documentQueue = new Queue<DocumentJob>('docmind-documents', {
     backoff: {
       type: 'exponential',
       delay: 3000, // 初始延迟 3 秒
-      multiplier: 1.5, // 每次延迟增加 1.5 倍
     },
     removeOnComplete: true,
     removeOnFail: { count: 100 }, // 保留最近 100 条失败记录供排查
@@ -26,14 +25,14 @@ export const documentQueue = new Queue<DocumentJob>('docmind-documents', {
 })
 
 // 监听队列事件
-documentQueue.on('completed', (job) => {
+;(documentQueue as any).on('completed', (job: any) => {
   console.log(`[Queue] Job ${job.id} completed`, job.data.documentId)
 })
 
-documentQueue.on('failed', (job, err) => {
+;(documentQueue as any).on('failed', (job: any, err: any) => {
   console.error(`[Queue] Job ${job?.id} failed:`, err.message)
 })
 
-documentQueue.on('error', (error) => {
+;(documentQueue as any).on('error', (error: any) => {
   console.error('[Queue] Error:', error)
 })

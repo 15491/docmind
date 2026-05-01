@@ -1,11 +1,15 @@
 "use client"
 
+import { useState } from "react"
 import { ChevronRight } from "lucide-react"
 import { SaveButton, FieldRow, TextInput, MaskInput, RangeInput } from "./form"
-import { useProfileForm, useApiForm, useRagConfig, useDangerZone } from "./hooks"
+import { useProfileForm, useEmailChange, useApiForm, useRagConfig, useDangerZone } from "./hooks"
 
 export function ProfileSection() {
   const { nickname, setNickname, email, oldPwd, setOldPwd, newPwd, setNewPwd, handleSave } = useProfileForm()
+  const [showEmailChange, setShowEmailChange] = useState(false)
+  const { newEmail, setNewEmail, code, setCode, step, sending, saving, error: emailError, countdown, sendCode, confirmChange } = useEmailChange()
+
   return (
     <div>
       <div className="mb-5">
@@ -18,9 +22,74 @@ export function ProfileSection() {
           <FieldRow label="昵称" hint="显示在对话界面右下角">
             <TextInput value={nickname} onChange={setNickname} placeholder="你的名字" />
           </FieldRow>
-          <FieldRow label="邮箱" hint="用于登录和通知，暂不支持修改">
-            <TextInput value={email} onChange={() => {}} type="email" placeholder="you@example.com" />
+          <FieldRow label="邮箱" hint={showEmailChange ? undefined : "用于登录和通知"}>
+            <div className="flex items-center gap-2 w-full">
+              <TextInput value={email} onChange={() => {}} type="email" placeholder="you@example.com" />
+              {!showEmailChange && (
+                <button
+                  type="button"
+                  onClick={() => setShowEmailChange(true)}
+                  className="flex-shrink-0 text-[11.5px] font-medium text-zinc-500 hover:text-zinc-800 underline underline-offset-2 transition-colors"
+                >
+                  修改
+                </button>
+              )}
+            </div>
           </FieldRow>
+          {showEmailChange && (
+            <div className="py-4 border-t border-[#f0f0f3] space-y-3">
+              <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider">修改邮箱</p>
+              {emailError && (
+                <p className="text-[12px] text-red-500">{emailError}</p>
+              )}
+              {step === "done" ? (
+                <p className="text-[12.5px] text-green-600">邮箱已更新，页面即将刷新…</p>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <TextInput
+                      value={newEmail}
+                      onChange={setNewEmail}
+                      type="email"
+                      placeholder="输入新邮箱地址"
+                    />
+                    <button
+                      type="button"
+                      onClick={sendCode}
+                      disabled={sending || countdown > 0 || !newEmail}
+                      className="flex-shrink-0 h-9 px-3.5 rounded-[8px] border border-[#e2e2e8] text-[12px] font-medium text-[#35353d] bg-white hover:bg-[#f7f7f8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {sending ? "发送中…" : countdown > 0 ? `${countdown}s` : "发送验证码"}
+                    </button>
+                  </div>
+                  {step === "codeSent" && (
+                    <div className="flex gap-2">
+                      <TextInput
+                        value={code}
+                        onChange={setCode}
+                        placeholder="输入 6 位验证码"
+                      />
+                      <button
+                        type="button"
+                        onClick={confirmChange}
+                        disabled={saving || !code}
+                        className="flex-shrink-0 h-9 px-3.5 rounded-[8px] bg-zinc-900 text-white text-[12px] font-semibold hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {saving ? "确认中…" : "确认修改"}
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailChange(false)}
+                    className="text-[11.5px] text-[#aaabb2] hover:text-[#62636b] transition-colors"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="mb-6">

@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { http, ApiError } from "@/lib/request"
 import type { ResetForm } from "./types"
 
 export function useResetPassword(initialEmail = "") {
@@ -35,31 +36,31 @@ export function useResetPassword(initialEmail = "") {
   const handleSendCode = () => {
     if (!form.email || cooldown > 0) return
     startSending(async () => {
-      const res = await fetch("/api/auth/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, purpose: "reset-password" }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(data.error ?? "发送失败，请稍后重试"); return }
-      toast.success("验证码已发送，请查收邮件")
-      setCodeSent(true)
-      startCooldown()
+      try {
+        await http.post("/api/auth/send-code", { email: form.email, purpose: "reset-password" })
+        toast.success("验证码已发送，请查收邮件")
+        setCodeSent(true)
+        startCooldown()
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : "发送失败，请稍后重试")
+      }
     })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     startTransition(async () => {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, code: form.code, newPassword: form.password }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(data.error ?? "重置失败，请稍后重试"); return }
-      toast.success("密码已重置，请登录")
-      router.push("/login")
+      try {
+        await http.post("/api/auth/reset-password", {
+          email: form.email,
+          code: form.code,
+          newPassword: form.password,
+        })
+        toast.success("密码已重置，请登录")
+        router.push("/login")
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : "重置失败，请稍后重试")
+      }
     })
   }
 

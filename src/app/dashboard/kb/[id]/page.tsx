@@ -12,7 +12,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
   const { id } = use(params)
   const { kb } = useKbInfo(id)
   const kbName = kb?.name ?? "知识库"
-  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, fileInputRef, handleFileSelect, loading, loadingMore, hasMore, loadMore, error } = useDocList(id)
+  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, onRetry, fileInputRef, handleFileSelect, loading, loadingMore, hasMore, loadMore, error } = useDocList(id)
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -133,6 +133,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
                             <button
                               type="button"
                               title="重试"
+                              onClick={() => onRetry(doc.id)}
                               className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-amber-50 hover:text-amber-500 transition-colors"
                             >
                               <RotateCw size={13} strokeWidth={1.8} />

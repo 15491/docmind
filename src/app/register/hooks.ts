@@ -4,6 +4,7 @@ import { useState, useTransition, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
+import { http, ApiError } from "@/lib/request"
 import type { RegisterForm } from "./types"
 
 export function useRegisterForm() {
@@ -46,39 +47,29 @@ export function useRegisterForm() {
   const handleSendCode = () => {
     if (!form.email || cooldown > 0) return
     startSending(async () => {
-      const res = await fetch("/api/auth/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, purpose: "register" }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast.error(data.error ?? "发送失败，请稍后重试")
-        return
+      try {
+        await http.post("/api/auth/send-code", { email: form.email, purpose: "register" })
+        toast.success("验证码已发送，请查收邮件")
+        setCodeSent(true)
+        startCooldown()
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : "发送失败，请稍后重试")
       }
-      toast.success("验证码已发送，请查收邮件")
-      setCodeSent(true)
-      startCooldown()
     })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     startTransition(async () => {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await http.post("/api/register", {
           name: form.nickname,
           email: form.email,
           password: form.password,
           code: form.code,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        toast.error(data.error ?? "注册失败，请稍后重试")
+        })
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : "注册失败，请稍后重试")
         return
       }
 

@@ -116,6 +116,8 @@ model Document {
   mimeType        String
   /// 处理状态：processing | ready | failed
   status          String          @default("processing")
+  /// MinIO 对象存储路径
+  storageKey      String?
   /// 所属知识库 ID
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase   @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
@@ -129,18 +131,16 @@ model Document {
 
 model DocumentChunk {
   /// 分块唯一标识
-  id         String                       @id @default(cuid())
+  id         String   @id @default(cuid())
   /// 分块原始文本内容
   content    String
   /// 分块在文档中的顺序索引，从 0 开始
   chunkIndex Int
-  /// 文本向量，维度 2048，由智谱 AI embedding-3 生成
-  embedding  Unsupported("vector(2048)")?
   /// 所属文档 ID
   documentId String
-  document   Document                     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   /// 创建时间
-  createdAt  DateTime                     @default(now())
+  createdAt  DateTime @default(now())
 }
 
 model ChatSession {
@@ -148,6 +148,8 @@ model ChatSession {
   id              String        @id @default(cuid())
   /// 会话标题，由首条消息自动生成
   title           String?
+  /// 滚动摘要：超过 20 条消息后，旧消息被压缩为此字段，原消息删除
+  summary         String?
   /// 所属知识库 ID
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)

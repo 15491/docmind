@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { R, Err } from '@/lib/response'
 
 // GET /api/sessions/[id]/messages — 查询会话的所有消息
 export async function GET(
@@ -10,10 +11,7 @@ export async function GET(
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return Err.unauthorized()
     }
 
     const { id: sessionId } = await params
@@ -27,17 +25,11 @@ export async function GET(
     })
 
     if (!chatSession) {
-      return NextResponse.json(
-        { error: 'NOT_FOUND', message: '会话不存在' },
-        { status: 404 }
-      )
+      return Err.notFound('会话不存在')
     }
 
     if (chatSession.knowledgeBase.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'FORBIDDEN', message: '无权访问此会话' },
-        { status: 403 }
-      )
+      return Err.forbidden('无权访问此会话')
     }
 
     // 获取会话中的所有消息
@@ -46,7 +38,7 @@ export async function GET(
       orderBy: { createdAt: 'asc' },
     })
 
-    return NextResponse.json({
+    return R.ok({
       session: {
         id: chatSession.id,
         title: chatSession.title || '新对话',
@@ -62,9 +54,6 @@ export async function GET(
     })
   } catch (error) {
     console.error('[/api/sessions/[id]/messages] Error:', error)
-    return NextResponse.json(
-      { error: 'INTERNAL_ERROR', message: '获取消息失败' },
-      { status: 500 }
-    )
+    return Err.internal('获取消息失败')
   }
 }

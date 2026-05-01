@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Err } from '@/lib/response'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { embedText, searchVectors } from '@/lib/rag/embeddings'
-import { generateAnswer, parseStreamContent } from '@/lib/rag/generation'
+import { generateAnswer, callGLMForToolUse, fakeStream, parseStreamContent, type HistoryMessage } from '@/lib/rag/generation'
+import { summarizeMessages } from '@/lib/rag/summarize'
+import { webSearch, type WebResult } from '@/lib/web-search'
 import { rateLimit } from '@/lib/rate-limit'
 import { getUserApiKey } from '@/lib/get-api-key'
 
@@ -16,56 +19,20 @@ interface ChatRequest {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
-    }
+    if (!session?.user?.id) return Err.unauthorized()
 
     const { ok } = await rateLimit(`rl:chat:${session.user.id}`, 20, 60)
-    if (!ok) {
-      return NextResponse.json(
-        { error: 'RATE_LIMITED', message: '操作过于频繁，请稍后再试' },
-        { status: 429 }
-      )
-    }
+    if (!ok) return Err.tooMany('操作过于频繁，请稍后再试')
 
     const body = await req.json() as ChatRequest
     const { question, kbId, sessionId } = body
 
-    if (!question?.trim()) {
-      return NextResponse.json(
-        { error: 'INVALID_INPUT', message: '问题不能为空' },
-        { status: 422 }
-      )
-    }
+    if (!question?.trim()) return Err.invalid('问题不能为空')
+    if (!kbId)             return Err.invalid('缺少知识库ID')
 
-    if (!kbId) {
-      return NextResponse.json(
-        { error: 'INVALID_INPUT', message: '缺少知识库ID' },
-        { status: 422 }
-      )
-    }
-
-    // 验证知识库归属权
-    const kb = await prisma.knowledgeBase.findUnique({
-      where: { id: kbId },
-    })
-
-    if (!kb) {
-      return NextResponse.json(
-        { error: 'NOT_FOUND', message: '知识库不存在' },
-        { status: 404 }
-      )
-    }
-
-    if (kb.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'FORBIDDEN', message: '无权访问此知识库' },
-        { status: 403 }
-      )
-    }
+    const kb = await prisma.knowledgeBase.findUnique({ where: { id: kbId } })
+    if (!kb)                           return Err.notFound('知识库不存在')
+    if (kb.userId !== session.user.id) return Err.forbidden('无权访问此知识库')
 
     // 获取用户的 API Key
     const userApiKey = await getUserApiKey(session.user.id)
@@ -76,10 +43,7 @@ export async function POST(req: NextRequest) {
       : null
 
     if (session_record && session_record.knowledgeBaseId !== kbId) {
-      return NextResponse.json(
-        { error: 'FORBIDDEN', message: '会话不属于此知识库' },
-        { status: 403 }
-      )
+      return Err.forbidden('会话不属于此知识库')
     }
 
     if (!session_record) {
@@ -91,8 +55,29 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // 获取历史消息（保存当前消息之前，避免包含自身）
+    const recentMessages = await prisma.message.findMany({
+      where: {
+        sessionId: session_record.id,
+        role: { in: ['user', 'assistant'] },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: -8,
+      select: { role: true, content: true },
+    })
+    const history: HistoryMessage[] = recentMessages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }))
+
+    // 若 session 有摘要，以 user→assistant 对的形式 prepend（顺序：user 在前）
+    if (session_record.summary) {
+      history.unshift({ role: 'assistant', content: '好的，我已了解之前的对话内容，请继续。' })
+      history.unshift({ role: 'user', content: `[对话历史摘要]\n${session_record.summary}` })
+    }
+
     // 保存用户消息
-    const userMessage = await prisma.message.create({
+    await prisma.message.create({
       data: {
         role: 'user',
         content: question,
@@ -106,30 +91,71 @@ export async function POST(req: NextRequest) {
       questionEmbedding = await embedText(question, userApiKey)
     } catch (error) {
       console.error('[/api/chat] Embedding error:', error)
-      return NextResponse.json(
-        { error: 'EMBEDDING_ERROR', message: '问题处理失败' },
-        { status: 500 }
-      )
+      return Err.internal('问题处理失败')
     }
 
-    // 向量检索相关 chunks
+    // 向量检索知识库
     let searchResults
     try {
-      searchResults = await searchVectors({
-        embedding: questionEmbedding,
-        kbId,
-        topK: 5,
-      })
+      searchResults = await searchVectors({ embedding: questionEmbedding, kbId, topK: 5 })
     } catch (error) {
       console.error('[/api/chat] Search error:', error)
-      return NextResponse.json(
-        { error: 'SEARCH_ERROR', message: '检索失败' },
-        { status: 500 }
-      )
+      return Err.internal('检索失败')
     }
 
-    if (searchResults.length === 0) {
-      // 无匹配内容
+    // 组装文档 context
+    const buildPrompt = (extraWebResults: WebResult[] = []) => {
+      const docChunks = searchResults
+        .map((r, i) => `[文档${i + 1}] ${r.fileName}\n${r.content}`)
+        .join('\n\n')
+      const webChunks = extraWebResults
+        .map((r, i) => `[网络${i + 1}] ${r.title}（${r.url}）\n${r.content}`)
+        .join('\n\n')
+      const contextParts = [
+        docChunks && `【知识库文档】\n${docChunks}`,
+        webChunks && `【联网搜索结果】\n${webChunks}`,
+      ].filter(Boolean).join('\n\n')
+      return `基于以下内容回答问题。如果答案来自文档，请引用文档名称；如果来自网络搜索，请注明来源网址。\n\n${contextParts}\n\n【用户问题】\n${question}`
+    }
+
+    const systemPrompt = '你是一个专业的文档问答助手。如果知识库文档中已有足够信息，请直接基于文档回答；如果问题涉及实时数据、最新事件或文档中没有的内容，请调用 web_search 工具获取最新信息。'
+
+    // Tool Calling：第一次非流式调用，让 GLM 决定是否联网
+    let toolCheckResult
+    try {
+      toolCheckResult = await callGLMForToolUse({
+        prompt: buildPrompt(),
+        systemPrompt,
+        history,
+        apiKey: userApiKey,
+      })
+    } catch (error) {
+      console.error('[/api/chat] Tool use check error:', error)
+      return Err.internal('生成回答失败')
+    }
+
+    // 根据是否触发工具调用决定后续流程
+    let webResults: WebResult[] = []
+    let toolResultPayload: { id: string; content: string } | undefined
+
+    if (toolCheckResult.toolCall) {
+      // GLM 决定联网搜索
+      try {
+        webResults = await webSearch(toolCheckResult.toolCall.query)
+      } catch (err) {
+        console.error('[/api/chat] Web search error:', err)
+        // 搜索失败不阻断，降级到无网络结果
+      }
+      toolResultPayload = {
+        id: toolCheckResult.toolCall.id,
+        content: webResults.length > 0
+          ? webResults.map((r, i) => `[${i + 1}] ${r.title}（${r.url}）\n${r.content}`).join('\n\n')
+          : '未找到相关网络结果',
+      }
+    }
+
+    // 若知识库和网络均无结果，直接返回提示
+    if (searchResults.length === 0 && webResults.length === 0 && !toolCheckResult.toolCall) {
       return new NextResponse(
         new ReadableStream({
           async start(controller) {
@@ -157,33 +183,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 组装 Prompt
-    const contextChunks = searchResults
-      .map((r, i) => `[文档${i + 1}] ${r.fileName}\n${r.content}`)
-      .join('\n\n')
-
-    const prompt = `基于以下文档内容回答问题。如果答案在文档中，请引用文档名称和相关内容。
-
-【参考文档】
-${contextChunks}
-
-【用户问题】
-${question}`
-
-    // 调用 GLM API 流式生成
-    let glmResponse
+    // 准备最终流式响应（无工具调用时用 fakeStream 包装直接回答）
+    let glmResponse: ReadableStream<Uint8Array>
     try {
-      glmResponse = await generateAnswer({
-        prompt,
-        systemPrompt: '你是一个专业的文档问答助手。请根据提供的文档内容准确回答用户问题，并在答案中引用具体的文档片段。',
-        apiKey: userApiKey,
-      })
+      if (toolCheckResult.toolCall) {
+        // 第二次调用（流式），携带工具结果
+        glmResponse = await generateAnswer({
+          prompt: buildPrompt(webResults),
+          systemPrompt,
+          history,
+          toolResult: toolResultPayload,
+          apiKey: userApiKey,
+        })
+      } else {
+        // GLM 已直接回答，包装为假流
+        glmResponse = fakeStream(toolCheckResult.content)
+      }
     } catch (error) {
       console.error('[/api/chat] Generation error:', error)
-      return NextResponse.json(
-        { error: 'GENERATION_ERROR', message: '生成回答失败' },
-        { status: 500 }
-      )
+      return Err.internal('生成回答失败')
     }
 
     // 返回 SSE 流式响应
@@ -191,6 +209,15 @@ ${question}`
       new ReadableStream({
         async start(controller) {
           try {
+            // 通知前端正在联网搜索（在流开始前发出）
+            if (toolCheckResult.toolCall) {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  `event: tool_call\ndata: ${JSON.stringify({ query: toolCheckResult.toolCall.query })}\n\n`
+                )
+              )
+            }
+
             let fullContent = ''
 
             // 流式输出文本
@@ -203,12 +230,20 @@ ${question}`
               )
             }
 
-            // 发送引用来源
-            const sources = searchResults.map(r => ({
-              fileName: r.fileName,
-              chunkIndex: r.chunkIndex,
-              content: r.content.slice(0, 200),
-            }))
+            // 发送引用来源（文档 + 联网结果）
+            const sources = [
+              ...searchResults.map((r) => ({
+                fileName: r.fileName,
+                chunkIndex: r.chunkIndex,
+                content: r.content.slice(0, 200),
+              })),
+              ...webResults.map((r) => ({
+                fileName: r.title,
+                chunkIndex: 0,
+                content: r.content.slice(0, 200),
+                url: r.url,
+              })),
+            ]
 
             controller.enqueue(
               new TextEncoder().encode(
@@ -225,6 +260,41 @@ ${question}`
                 sessionId: session_record.id,
               },
             })
+
+            // 滚动摘要：消息超过 20 条时压缩旧消息
+            const totalCount = await prisma.message.count({
+              where: {
+                sessionId: session_record.id,
+                role: { in: ['user', 'assistant'] },
+              },
+            })
+            if (totalCount > 20) {
+              const allMessages = await prisma.message.findMany({
+                where: {
+                  sessionId: session_record.id,
+                  role: { in: ['user', 'assistant'] },
+                },
+                orderBy: { createdAt: 'asc' },
+                select: { id: true, role: true, content: true },
+              })
+              const toSummarize = allMessages.slice(0, allMessages.length - 8)
+              if (toSummarize.length > 0) {
+                try {
+                  const summary = await summarizeMessages(toSummarize, userApiKey)
+                  await prisma.$transaction([
+                    prisma.chatSession.update({
+                      where: { id: session_record.id },
+                      data: { summary },
+                    }),
+                    prisma.message.deleteMany({
+                      where: { id: { in: toSummarize.map((m) => m.id) } },
+                    }),
+                  ])
+                } catch (err) {
+                  console.error('[/api/chat] Summarize failed:', err)
+                }
+              }
+            }
 
             // 发送完成事件
             controller.enqueue(
@@ -265,9 +335,6 @@ ${question}`
     )
   } catch (error) {
     console.error('[/api/chat] Error:', error)
-    return NextResponse.json(
-      { error: 'INTERNAL_ERROR', message: '处理失败' },
-      { status: 500 }
-    )
+    return Err.internal('处理失败')
   }
 }

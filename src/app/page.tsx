@@ -28,7 +28,7 @@ export default function HomePage() {
           style={{ background: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.1)" }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
-          基于 GLM-4-Flash · pgvector · Next.js 16
+          基于 GLM-4-Flash · Elasticsearch · Next.js 16
         </div>
 
         <h1 className="text-[48px] font-bold leading-[1.1] tracking-tight text-[#0f0f10] max-w-2xl mb-4">

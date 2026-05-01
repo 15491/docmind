@@ -2,7 +2,7 @@
 
 import { use } from "react"
 import Link from "next/link"
-import { FileText, Send, Shield, Paperclip, Upload, Sparkles } from "lucide-react"
+import { FileText, Send, Shield, Paperclip, Upload, Sparkles, Globe } from "lucide-react"
 import { SUGGESTIONS } from "./constants"
 import { useChat } from "./hooks"
 import { useKb } from "./kb-context"
@@ -13,7 +13,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const kb = useKb()
   const kbName = kb?.name ?? "知识库"
   const docCount = kb?.documentCount ?? 0
-  const { messages, input, setInput, streaming, error, textareaRef, bottomRef, handleSend } = useChat(id)
+  const { messages, input, setInput, streaming, searching, error, textareaRef, bottomRef, handleSend } = useChat(id)
 
   const header = (
     <header className="h-[52px] px-6 flex items-center justify-between border-b border-[#ebebed] flex-shrink-0 bg-white">
@@ -150,21 +150,28 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           </div>
         ))}
 
-        {streaming && (
+        {(streaming || searching) && (
           <div className="flex gap-3 px-6">
             <AIAvatar />
             <div
               className="bg-white rounded-[4px_14px_14px_14px] px-4 py-3.5"
               style={{ border: "1px solid #e4e4e7", borderLeft: "2.5px solid #18181b", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(0,0,0,0.04)" }}
             >
-              <div className="flex items-center gap-2 text-[11.5px] font-medium text-[#c0c0c8]">
-                <div className="flex gap-0.5">
-                  {[0, 1, 2].map((i) => (
-                    <span key={i} className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: `${i * 0.18}s` }} />
-                  ))}
+              {searching ? (
+                <div className="flex items-center gap-2 text-[11.5px] font-medium text-blue-400">
+                  <Globe size={12} strokeWidth={2} className="animate-pulse" />
+                  正在联网搜索…
                 </div>
-                正在基于知识库内容生成回答…
-              </div>
+              ) : (
+                <div className="flex items-center gap-2 text-[11.5px] font-medium text-[#c0c0c8]">
+                  <div className="flex gap-0.5">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: `${i * 0.18}s` }} />
+                    ))}
+                  </div>
+                  正在基于知识库内容生成回答…
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -204,7 +211,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         </div>
         <div className="flex items-center gap-1.5 mt-2.5 text-[11px] text-[#aaabb2]">
           <Shield size={11} strokeWidth={2} />
-          回答仅基于已上传的文档内容，不受大模型训练数据影响
+          回答基于知识库文档，必要时 AI 将自动联网补充
         </div>
       </div>
     </>

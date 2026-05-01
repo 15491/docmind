@@ -1,6 +1,7 @@
 "use client"
 
-import { X, FileText, ChevronRight, RotateCw, Eye, Trash2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, FileText, ChevronRight, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { http } from "@/lib/request"
 import type { Doc, DocStatus } from "./types"
 import { STATUS_MAP } from "./constants"
 
@@ -22,8 +24,32 @@ export function StatusBadge({ status }: { status: DocStatus }) {
 }
 
 export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () => void; kbName: string }) {
-  const preview = null
   const ext = doc.fileName.split(".").pop()?.toLowerCase()
+  const isPdf  = ext === "pdf"
+  const isText = ext === "txt" || ext === "md"
+
+  const [state, setState] = useState<{
+    loading: boolean
+    content?: string
+    url?: string
+    error?: string
+  }>({ loading: doc.status === "ready" })
+
+  useEffect(() => {
+    if (doc.status !== "ready") return
+
+    http.get<{ url: string }>(`/api/files/${doc.id}`)
+      .then(async ({ url }) => {
+        if (isText) {
+          const res = await fetch(url)
+          const content = await res.text()
+          setState({ loading: false, content })
+        } else {
+          setState({ loading: false, url })
+        }
+      })
+      .catch(() => setState({ loading: false, error: "加载预览失败，请稍后重试" }))
+  }, [doc.id, doc.status, isText])
 
   return (
     <>
@@ -57,7 +83,7 @@ export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () =
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#e8e8ec] [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="flex-1 overflow-hidden flex flex-col">
           {doc.status === "processing" ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
               <div className="flex gap-1">
@@ -74,28 +100,31 @@ export function PreviewPanel({ doc, onClose, kbName }: { doc: Doc; onClose: () =
               </div>
               <p className="text-[12.5px] text-[#aaabb2]">文档解析失败，无法预览</p>
             </div>
-          ) : preview ? (
-            ext === "pdf" ? (
-              <div className="bg-[#f7f7f8] rounded-[8px] p-4">
-                <div className="bg-white rounded-[6px] p-6 shadow-sm">
-                  <pre className="text-[13px] text-[#35353d] leading-[1.8] whitespace-pre-wrap font-sans">
-                    {preview.content}
-                  </pre>
-                </div>
-              </div>
-            ) : ext === "md" ? (
-              <div className="prose prose-sm max-w-none">
-                <pre className="text-[13px] text-[#35353d] leading-[1.8] whitespace-pre-wrap font-sans bg-transparent p-0">
-                  {preview.content}
-                </pre>
-              </div>
-            ) : (
+          ) : state.loading ? (
+            <div className="flex items-center justify-center h-full gap-2 text-[#aaabb2]">
+              <Loader2 size={15} strokeWidth={2} className="animate-spin" />
+              <span className="text-[12.5px]">加载中…</span>
+            </div>
+          ) : state.error ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-[12.5px] text-red-400">{state.error}</p>
+            </div>
+          ) : isPdf && state.url ? (
+            <iframe
+              src={state.url}
+              className="flex-1 w-full border-0"
+              title={doc.fileName}
+            />
+          ) : state.content ? (
+            <div className="flex-1 overflow-y-auto px-5 py-5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#e8e8ec] [&::-webkit-scrollbar-thumb]:rounded-full">
               <pre className="text-[13px] text-[#35353d] leading-[1.8] whitespace-pre-wrap font-sans">
-                {preview.content}
+                {state.content}
               </pre>
-            )
+            </div>
           ) : (
-            <p className="text-[13px] text-[#aaabb2]">暂无预览内容</p>
+            <div className="flex items-center justify-center h-full">
+              <p className="text-[12.5px] text-[#aaabb2]">暂无预览内容</p>
+            </div>
           )}
         </div>
       </div>

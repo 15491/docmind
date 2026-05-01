@@ -1,198 +1,112 @@
-# 🧠 DocMind — AI 知识库问答系统
+# DocMind — AI 知识库问答系统
 
-一个基于 RAG（检索增强生成）的私有文档问答系统。上传任意文档，获得精准的 AI 回答，所有答案都有引用溯源。
-
-**核心价值：** 告别 AI 幻觉，让 AI 只基于你的文档回答问题。
+基于 RAG（检索增强生成）的私有文档问答系统。上传文档，获得有引用溯源的精准 AI 回答。
 
 ---
 
-## 📋 快速导航
+## 技术栈
 
-### 项目文档
-
-| 文档 | 说明 |
+| 层级 | 技术 |
 |------|------|
-| **[PROJECT.md](./PROJECT.md)** | 项目完整需求分析、架构设计、数据模型 |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | 前端页面结构、路由设计、交互流程 |
-| **[API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md)** | 核心3个API的实现方案（代码示例 + 逻辑详解）⭐ |
-| **[DEV_PROGRESS.md](./DEV_PROGRESS.md)** | 开发进度跟踪、本周计划、常见问题 |
-
-### 核心API
-
-- **[`POST /api/upload`](./API_IMPLEMENTATION.md#二api-1-post-apiupload--文件上传)** — 上传文档，触发异步处理
-- **[`POST /api/chat`](./API_IMPLEMENTATION.md#三api-2-post-apichat--sse-流式问答)** — SSE 流式问答
-- **[`GET /api/documents/status`](./API_IMPLEMENTATION.md#四api-3-get-apidocumentsstatus--文档处理状态)** — 查询文档处理状态
+| 框架 | Next.js 16 + React 19 (App Router) |
+| 语言 | TypeScript 5 |
+| 样式 | Tailwind CSS 4 + shadcn/ui |
+| 数据库 | PostgreSQL (Prisma 7) |
+| 对象存储 | MinIO |
+| 向量检索 | Elasticsearch 8 (KNN dense_vector) |
+| 缓存/队列 | Redis + BullMQ |
+| 认证 | NextAuth.js v5 (GitHub / Google OAuth + 邮箱密码) |
+| AI | 智谱 AI — GLM-4-Flash (对话) + embedding-3 (向量化) |
+| 邮件 | Resend |
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
-### 1️⃣ 环境准备
-
-```bash
-# 克隆项目
-git clone <repo-url>
-cd docmind
-
-# 安装依赖
-npm install
-
-# 环境变量配置
-# 编辑 .env.local，填入以下信息：
-# - DATABASE_URL （PostgreSQL + pgvector）
-# - REDIS_URL （Redis）
-# - NEXTAUTH_SECRET & NEXTAUTH_URL
-# - ZHIPU_API_KEY （智谱AI - 从 https://open.bigmodel.cn/ 获取）
-```
-
-### 获取 Zhipu AI API Key
-
-1. 访问 https://open.bigmodel.cn/
-2. 注册账户并完成实名认证
-3. 进入「API Key 管理」创建新的 API Key
-4. 充值账户余额（建议 50-100 元作为初始额度）
-5. 将 API Key 添加到 `.env.local`：
-```env
-ZHIPU_API_KEY="sk-你的api-key"
-```
-
-### 2️⃣ 数据库初始化
+### 1. 启动依赖服务
 
 ```bash
-# 执行 Prisma migrations
-pnpm prisma migrate dev
+# PostgreSQL（如本地无实例，自行安装或用 Docker）
+# Redis
+docker run -d -p 6379:6379 redis:7-alpine
 
-# 生成 Prisma Client
+# MinIO
+docker run -d -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  minio/minio server /data --console-address ":9001"
+
+# Elasticsearch
+docker run -d -p 9200:9200 \
+  -e discovery.type=single-node \
+  -e xpack.security.enabled=false \
+  docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+```
+
+### 2. 配置环境变量
+
+```bash
+cp .env.example .env.local
+# 编辑 .env.local，填入实际值
+```
+
+### 3. 数据库迁移
+
+```bash
+pnpm prisma migrate deploy
 pnpm prisma generate
 ```
 
-### 3️⃣ 启动开发服务器
+### 4. 启动
 
 ```bash
+# 开发模式（Web + Worker 集成在一个进程）
 pnpm dev
+
+# 生产模式（Web 和 Worker 分开启动）
+pnpm build
+pnpm start
+pnpm worker   # 另开终端
 ```
 
-打开 [http://localhost:3000](http://localhost:3000) 即可看到项目。
+---
+
+## 环境变量
+
+详见 [`.env.example`](./.env.example)。
 
 ---
 
-## 📊 项目进度
+## 核心功能
 
-### 当前阶段：✅ 核心功能完整（100%）
-
-```
-✅ 已完成（100%）
-├─ 项目规划 & 架构设计
-├─ 前端 UI 搭建
-├─ 数据模型 & 数据库配置
-├─ 所有 MOCK 数据已清理
-├─ 9 个 API 端点全部实现
-├─ 10 个自定义 hooks 完整实现
-├─ 字段名称映射一致
-├─ Next.js 15 API 路由更新
-├─ Zhipu AI 集成完成
-└─ 测试通过 ✓ Dev 服务器正常启动
-```
-
-### ✅ 最新更新 (2026年5月)
-
-- ✅ 清理所有 MOCK 数据常量，使用真实 API
-- ✅ 实现完整的 RAG Pipeline
-- ✅ 修复所有字段名称不一致问题
-- ✅ 更新 Next.js 15 API 路由参数格式
-- ✅ 完成 Zhipu AI 集成和配置
-
-### 下一步计划
-
-- [ ] 性能优化和缓存策略
-- [ ] 权限控制和多用户隔离
-- [ ] 对话历史优化和上下文管理
-- [ ] 日志系统和监控面板
-
-详见 [`DEV_PROGRESS.md`](./DEV_PROGRESS.md)
+- 文档上传：PDF / Markdown / TXT，最大 10 MB，上传即返回（异步处理）
+- RAG Pipeline：解析 → 分块（500 token，50 重叠）→ Embedding → Elasticsearch KNN 索引
+- 流式问答：SSE 流式输出，引用溯源至原始文档分块
+- 多知识库：每个用户可创建多个独立知识库
+- 语义搜索：跨知识库全局向量检索
+- 用户系统：邮箱注册（验证码）+ GitHub / Google OAuth + 密码重置
 
 ---
 
-## 🏗️ 技术栈
+## API 概览
 
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| **框架** | Next.js 16 + React 19 | App Router + Server Components |
-| **语言** | TypeScript | 类型安全 |
-| **样式** | Tailwind CSS + shadcn/ui | 高效开发 |
-| **数据库** | PostgreSQL + pgvector | 向量存储 + ORM (Prisma) |
-| **缓存/队列** | Redis + BullMQ | 异步处理大文件 |
-| **认证** | NextAuth.js | GitHub OAuth |
-| **AI** | 智谱AI | GLM-4-Flash + Embedding API |
-| **部署** | Railway | Node.js + Redis + PostgreSQL |
-
----
-
-## 📚 核心功能
-
-### MVP（最小可行产品）
-
-- ✅ 文档上传（PDF / Markdown / TXT）
-- ✅ 自动解析 + 向量化
-- ✅ 语义检索（Top-5）
-- ✅ SSE 流式问答
-- ✅ 引用溯源
-- ✅ 对话历史
-
-### 扩展功能（计划中）
-
-- 🔄 Agent 编排系统 （多Agent协作）
-- 🔄 MCP 工具系统 （扩展工具）
-- 🔄 多轮对话优化
-- 🔄 知识库分享
-
-详见 [`PROJECT.md` 第十二章](./PROJECT.md#十二未来升级路线分阶段)
+| 端点 | 说明 |
+|------|------|
+| `POST /api/upload` | 上传文档，触发异步处理队列 |
+| `GET /api/documents/status` | 查询文档处理状态（游标分页） |
+| `DELETE /api/documents/[id]` | 删除文档及其向量数据 |
+| `GET /api/files/[id]` | 获取文档预签名下载 URL（1 小时有效） |
+| `POST /api/chat` | SSE 流式问答 |
+| `POST /api/search` | 向量语义搜索 |
+| `GET /api/sessions` | 获取对话历史列表 |
+| `GET /api/sessions/[id]/messages` | 获取会话消息记录 |
+| `GET/POST/DELETE /api/kb` | 知识库管理 |
+| `GET/PATCH/DELETE /api/user` | 用户信息管理 |
 
 ---
 
-## 🎯 简历亮点
+## 已知缺失
 
-> 独立设计并实现完整 RAG Pipeline：
-> - 文档解析 → 语义分块 → Embedding 向量化 → pgvector 检索 → Prompt 拼装 → GLM API 流式生成
-> - 基于 Next.js 16 App Router 构建，SSE 流式输出，首 Token 响应 < 1s
-> - 改用 PostgreSQL pgvector 替代独立向量数据库，零额外服务依赖
-> - 引用溯源功能，有效解决 AI 幻觉问题
-> - BullMQ 异步队列处理大文件，上传接口响应 < 500ms
-
----
-
-## 🔗 相关链接
-
-- [Prisma 数据模型](./PROJECT.md#六数据模型)
-- [前端页面设计](./ARCHITECTURE.md)
-- [API 实现指南](./API_IMPLEMENTATION.md) ⭐
-- [开发进度与计划](./DEV_PROGRESS.md)
-
----
-
-## 💡 常见问题
-
-**Q: 如何测试 API？**  
-A: 见 [`DEV_PROGRESS.md` 第五章](./DEV_PROGRESS.md#五常见问题与解决方案)
-
-**Q: 如何部署到生产环境？**  
-A: 见 [`DEV_PROGRESS.md` 第六章](./DEV_PROGRESS.md#六部署检查清单)
-
-**Q: 向量数据库如何工作？**  
-A: 见 [`API_IMPLEMENTATION.md` 第三章](./API_IMPLEMENTATION.md#三api-2-post-apichat--sse-流式问答)
-
----
-
-## 📝 文档版本
-
-| 文档 | 版本 | 更新日期 |
-|------|------|---------|
-| README.md | v1.0 | 2026-04-30 |
-| PROJECT.md | v2.0 | 2026-04-30 |
-| ARCHITECTURE.md | v2.0 | 2026-04-30 |
-| API_IMPLEMENTATION.md | v1.0 | 2026-04-30 |
-| DEV_PROGRESS.md | v1.0 | 2026-04-30 |
-
----
-
-🚀 **Ready to build the future of private document AI!**
+- 失败文档的重试入口（UI 按钮已占位，无 onClick 处理）
+- 多轮对话上下文（每次请求独立，不携带历史消息）
+- 邮箱修改功能

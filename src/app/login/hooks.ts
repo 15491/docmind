@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
+import { http } from "@/lib/request"
 import type { LoginStep } from "./types"
 
 export function useLoginFlow() {
@@ -21,19 +22,18 @@ export function useLoginFlow() {
     e.preventDefault()
     setEmailError(null)
     startChecking(async () => {
-      const res = await fetch("/api/auth/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
-      if (data.status === "not_found") {
-        setEmailError("该邮箱未注册")
-      } else if (data.status === "password") {
-        setStep("password")
-      } else if (data.status === "oauth") {
-        setOauthProviders(data.providers as string[])
-        setStep("oauth")
+      try {
+        const data = await http.post<{ status: string; providers?: string[] }>("/api/auth/check-email", { email })
+        if (data.status === "not_found") {
+          setEmailError("该邮箱未注册")
+        } else if (data.status === "password") {
+          setStep("password")
+        } else if (data.status === "oauth") {
+          setOauthProviders(data.providers as string[])
+          setStep("oauth")
+        }
+      } catch {
+        setEmailError("验证失败，请稍后重试")
       }
     })
   }

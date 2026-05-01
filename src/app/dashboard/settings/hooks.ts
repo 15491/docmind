@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { useState, useEffect, useRef } from "react"
 import { signOut } from "next-auth/react"
 import { toast } from "sonner"
+import { http, ApiError } from "@/lib/request"
 
-const LS_API = "docmind:api-config"
 const LS_RAG = "docmind:rag-config"
 
 export function useProfileForm() {
@@ -12,16 +12,12 @@ export function useProfileForm() {
   const [email, setEmail] = useState("")
   const [oldPwd, setOldPwd] = useState("")
   const [newPwd, setNewPwd] = useState("")
-  const [, startTransition] = useTransition()
 
   useEffect(() => {
-    fetch("/api/user")
-      .then((r) => r.json())
+    http.get<{ user: { name?: string; email?: string } }>("/api/user")
       .then((data) => {
-        if (data.user) {
-          setNickname(data.user.name ?? "")
-          setEmail(data.user.email ?? "")
-        }
+        setNickname(data.user.name ?? "")
+        setEmail(data.user.email ?? "")
       })
       .catch(() => {})
   }, [])
@@ -31,33 +27,24 @@ export function useProfileForm() {
 
     if (nickname.trim()) {
       tasks.push(
-        fetch("/api/user", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: nickname.trim() }),
-        }).then(async (res) => {
-          if (!res.ok) {
-            const d = await res.json().catch(() => ({}))
-            throw new Error(d.error ?? "昵称保存失败")
-          }
-        })
+        http.patch("/api/user", { name: nickname.trim() })
+          .then(() => {})
+          .catch((err) => {
+            throw new Error(err instanceof ApiError ? err.message : "昵称保存失败")
+          })
       )
     }
 
     if (oldPwd && newPwd) {
       tasks.push(
-        fetch("/api/user/password", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
-        }).then(async (res) => {
-          if (!res.ok) {
-            const d = await res.json().catch(() => ({}))
-            throw new Error(d.error ?? "密码修改失败")
-          }
-          setOldPwd("")
-          setNewPwd("")
-        })
+        http.patch("/api/user/password", { oldPassword: oldPwd, newPassword: newPwd })
+          .then(() => {
+            setOldPwd("")
+            setNewPwd("")
+          })
+          .catch((err) => {
+            throw new Error(err instanceof ApiError ? err.message : "密码修改失败")
+          })
       )
     }
 
@@ -70,7 +57,71 @@ export function useProfileForm() {
     toast.success("保存成功")
   }
 
-  return { nickname, setNickname, email, oldPwd, setOldPwd, newPwd, setNewPwd, handleSave }
+  return { nickname, setNickname, email, setEmail, oldPwd, setOldPwd, newPwd, setNewPwd, handleSave }
+}
+
+export function useEmailChange() {
+  const [newEmail, setNewEmail] = useState("")
+  const [code, setCode] = useState("")
+  const [step, setStep] = useState<"idle" | "codeSent" | "done">("idle")
+  const [sending, setSending] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const [countdown, setCountdown] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+  const startCountdown = () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    setCountdown(60)
+    timerRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(timerRef.current!)
+          timerRef.current = null
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+  }
+
+  const sendCode = async () => {
+    setError("")
+    setSending(true)
+    try {
+      await http.post("/api/auth/send-code", { email: newEmail, purpose: "change-email" })
+      setStep("codeSent")
+      startCountdown()
+      toast.success("验证码已发送")
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "发送失败")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const confirmChange = async () => {
+    setError("")
+    setSaving(true)
+    try {
+      await http.patch("/api/user/email", { email: newEmail, code })
+      setStep("done")
+      toast.success("邮箱已更新，请重新登录")
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "修改失败")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return { newEmail, setNewEmail, code, setCode, step, sending, saving, error, countdown, sendCode, confirmChange }
 }
 
 export function useApiForm() {
@@ -78,8 +129,7 @@ export function useApiForm() {
   const [baseUrl, setBaseUrl] = useState("https://open.bigmodel.cn/api/paas/v4")
 
   useEffect(() => {
-    fetch("/api/user")
-      .then((r) => r.json())
+    http.get<{ user: { zhipuApiKey?: string } }>("/api/user")
       .then((data) => {
         if (data.user?.zhipuApiKey) setGlmKey(data.user.zhipuApiKey)
       })
@@ -87,16 +137,12 @@ export function useApiForm() {
   }, [])
 
   const handleSave = async () => {
-    const res = await fetch("/api/user", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ zhipuApiKey: glmKey }),
-    })
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      throw new Error(d.error ?? "保存失败")
+    try {
+      await http.patch("/api/user", { zhipuApiKey: glmKey })
+      toast.success("API Key 已保存")
+    } catch (err) {
+      throw new Error(err instanceof ApiError ? err.message : "保存失败")
     }
-    toast.success("API Key 已保存")
   }
 
   return { glmKey, setGlmKey, baseUrl, setBaseUrl, handleSave }
@@ -134,8 +180,7 @@ export function useDangerZone() {
   const handleClearKbs = async () => {
     setClearing(true)
     try {
-      const res = await fetch("/api/user/kbs", { method: "DELETE" })
-      if (!res.ok) throw new Error("清空失败")
+      await http.del("/api/user/kbs")
       toast.success("所有知识库已清空")
     } catch {
       toast.error("清空失败，请稍后重试")
@@ -148,8 +193,7 @@ export function useDangerZone() {
     if (confirm !== "DELETE") return
     setDeleting(true)
     try {
-      const res = await fetch("/api/user", { method: "DELETE" })
-      if (!res.ok) throw new Error("注销失败")
+      await http.del("/api/user")
       toast.success("账户已注销")
       await signOut({ redirectTo: "/" })
     } catch {

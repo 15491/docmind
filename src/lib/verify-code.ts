@@ -1,7 +1,8 @@
+import { randomInt } from "crypto"
 import { redis } from "./redis"
 import { sendEmail } from "./mailer"
 
-export type VerifyPurpose = "register" | "reset-password"
+export type VerifyPurpose = "register" | "reset-password" | "change-email"
 
 const TTL = 300      // 验证码有效期 5 分钟
 const COOLDOWN = 60  // 重发冷却 60 秒
@@ -29,7 +30,7 @@ export async function sendVerifyCode(purpose: VerifyPurpose, email: string) {
     }
   }
 
-  const code = String(crypto.randomInt(100000, 1000000))
+  const code = String(randomInt(100000, 1000000))
   const record: CodeRecord = { code, attempts: 0, sentAt: Math.floor(Date.now() / 1000) }
   await redis.setex(k, TTL, JSON.stringify(record))
 
@@ -71,16 +72,19 @@ export async function verifyCode(
 const SUBJECTS: Record<VerifyPurpose, string> = {
   "register": "DocMind 注册验证码",
   "reset-password": "DocMind 重置密码验证码",
+  "change-email": "DocMind 修改邮箱验证码",
 }
 
 const TITLES: Record<VerifyPurpose, string> = {
   "register": "欢迎注册 DocMind",
   "reset-password": "重置你的密码",
+  "change-email": "修改你的邮箱",
 }
 
 const DESCS: Record<VerifyPurpose, string> = {
   "register": "请使用以下验证码完成注册，验证码 5 分钟内有效。",
   "reset-password": "请使用以下验证码重置密码，验证码 5 分钟内有效。",
+  "change-email": "请使用以下验证码完成邮箱修改，验证码 5 分钟内有效。",
 }
 
 function renderEmail(code: string, purpose: VerifyPurpose) {

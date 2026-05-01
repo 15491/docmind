@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { http, ApiError } from "@/lib/request"
 import type { SearchResult } from "./types"
 
 export function useSearch() {
@@ -18,21 +19,10 @@ export function useSearch() {
     setError(null)
 
     try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q.trim(), topK: 15 }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || '搜索失败')
-      }
-
-      const data = await response.json() as { success: boolean; results: SearchResult[] }
-      setResults(data.results || [])
+      const data = await http.post<{ results: SearchResult[] }>('/api/search', { query: q.trim(), topK: 15 })
+      setResults(data.results ?? [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : '搜索失败，请稍后重试')
+      setError(err instanceof ApiError ? err.message : '搜索失败，请稍后重试')
       setResults([])
     } finally {
       setSearched(true)

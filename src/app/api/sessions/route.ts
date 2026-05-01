@@ -1,24 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { R, Err } from '@/lib/response'
 
 // GET /api/sessions?kbId=xxx — 查询知识库的所有会话
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return Err.unauthorized()
     }
 
     const kbId = req.nextUrl.searchParams.get('kbId')
     if (!kbId) {
-      return NextResponse.json(
-        { error: 'INVALID_INPUT', message: '缺少 kbId 参数' },
-        { status: 422 }
-      )
+      return Err.invalid('缺少 kbId 参数')
     }
 
     // 验证知识库归属权
@@ -27,17 +22,11 @@ export async function GET(req: NextRequest) {
     })
 
     if (!kb) {
-      return NextResponse.json(
-        { error: 'NOT_FOUND', message: '知识库不存在' },
-        { status: 404 }
-      )
+      return Err.notFound('知识库不存在')
     }
 
     if (kb.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'FORBIDDEN', message: '无权访问此知识库' },
-        { status: 403 }
-      )
+      return Err.forbidden('无权访问此知识库')
     }
 
     const cursor = req.nextUrl.searchParams.get('cursor') ?? undefined
@@ -55,7 +44,7 @@ export async function GET(req: NextRequest) {
     const page = hasMore ? sessions.slice(0, limit) : sessions
     const nextCursor = hasMore ? page[page.length - 1].id : null
 
-    return NextResponse.json({
+    return R.ok({
       sessions: page.map(s => ({
         id: s.id,
         title: s.title || '新对话',
@@ -66,9 +55,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('[/api/sessions] Error:', error)
-    return NextResponse.json(
-      { error: 'INTERNAL_ERROR', message: '获取会话列表失败' },
-      { status: 500 }
-    )
+    return Err.internal('获取会话列表失败')
   }
 }

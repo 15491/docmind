@@ -6,6 +6,7 @@ import stripMarkdown from 'strip-markdown'
 import { chunkText } from './chunk'
 import { embedText } from './embeddings'
 import { prisma } from '@/lib/prisma'
+import { indexChunks } from '@/lib/elasticsearch'
 
 export interface ProcessDocumentProps {
   buffer: Buffer
@@ -13,6 +14,7 @@ export interface ProcessDocumentProps {
   fileName: string
   documentId: string
   knowledgeBaseId: string
+  userId: string
   apiKey?: string | null
 }
 
@@ -43,9 +45,9 @@ async function parseDocument(
     if (mimeType === 'text/markdown') {
       const processor = unified()
         .use(remarkParse)
-        .use(stripMarkdown)
+        .use(stripMarkdown as any)
       const ast = processor.parse(text)
-      const result = processor.runSync(ast)
+      const result = processor.runSync(ast) as any
       text = result.value as string
     }
 
@@ -65,6 +67,7 @@ export async function processDocument(
     fileName,
     documentId,
     knowledgeBaseId,
+    userId,
     apiKey,
   } = props
 
@@ -75,7 +78,7 @@ export async function processDocument(
     // 2️⃣ 文本分块（固定 token 数 + 重叠）
     const chunks = chunkText(text, 500, 50)
 
-    // 3️⃣ 批量并发向量化并保存 chunks（每批 10 个，避免逐条串行）
+    // 3️⃣ 批量并发向量化并索引到 Elasticsearch（每批 10 个，避免逐条串行）
     const BATCH_SIZE = 10
     let successCount = 0
 
@@ -84,17 +87,38 @@ export async function processDocument(
       const results = await Promise.allSettled(
         batch.map(async (chunk, j) => {
           const embedding = await embedText(chunk.text, apiKey)
-          const vectorString = `[${embedding.join(',')}]`
-          await prisma.$executeRaw`
-            INSERT INTO "DocumentChunk" (id, content, "chunkIndex", "documentId", embedding)
-            VALUES (${randomUUID()}, ${chunk.text}, ${i + j}, ${documentId}, ${vectorString}::vector(2048))
-          `
+          const chunkIndex = i + j
+          const chunkId = randomUUID()
+
+          // 同时插入到 PostgreSQL（content cache）和 Elasticsearch（vector search）
+          await Promise.all([
+            prisma.documentChunk.create({
+              data: {
+                id: chunkId,
+                content: chunk.text,
+                chunkIndex,
+                documentId,
+              },
+            }),
+            indexChunks([
+              {
+                id: `${documentId}-${chunkIndex}`,
+                content: chunk.text,
+                chunkIndex,
+                documentId,
+                kbId: knowledgeBaseId,
+                userId,
+                fileName,
+                embedding,
+              },
+            ]),
+          ])
         })
       )
       successCount += results.filter((r) => r.status === 'fulfilled').length
       results
         .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-        .forEach((r, j) => console.error(`Failed to embed chunk ${i + j}:`, r.reason))
+        .forEach((r, j) => console.error(`Failed to process chunk ${i + j}:`, r.reason))
     }
 
     // 4️⃣ 更新文档状态

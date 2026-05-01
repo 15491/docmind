@@ -4,7 +4,7 @@ import { authConfig } from "@/lib/auth.config"
 
 const { auth } = NextAuth(authConfig)
 
-export const proxy = auth((req) => {
+export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
 

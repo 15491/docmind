@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { R, Err } from '@/lib/response'
 
 // GET /api/kb/[id] — 获取知识库详情
 export async function GET(
@@ -10,10 +11,7 @@ export async function GET(
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return Err.unauthorized()
     }
 
     const { id } = await params
@@ -28,20 +26,14 @@ export async function GET(
     })
 
     if (!kb) {
-      return NextResponse.json(
-        { error: 'NOT_FOUND', message: '知识库不存在' },
-        { status: 404 }
-      )
+      return Err.notFound('知识库不存在')
     }
 
     if (kb.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'FORBIDDEN', message: '无权访问此知识库' },
-        { status: 403 }
-      )
+      return Err.forbidden('无权访问此知识库')
     }
 
-    return NextResponse.json({
+    return R.ok({
       kb: {
         id: kb.id,
         name: kb.name,
@@ -51,10 +43,7 @@ export async function GET(
     })
   } catch (error) {
     console.error('[/api/kb GET] Error:', error)
-    return NextResponse.json(
-      { error: 'INTERNAL_ERROR', message: '获取知识库失败' },
-      { status: 500 }
-    )
+    return Err.internal('获取知识库失败')
   }
 }
 
@@ -66,10 +55,7 @@ export async function DELETE(
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return Err.unauthorized()
     }
 
     const { id } = await params
@@ -80,17 +66,11 @@ export async function DELETE(
     })
 
     if (!kb) {
-      return NextResponse.json(
-        { error: 'NOT_FOUND', message: '知识库不存在' },
-        { status: 404 }
-      )
+      return Err.notFound('知识库不存在')
     }
 
     if (kb.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'FORBIDDEN', message: '无权删除此知识库' },
-        { status: 403 }
-      )
+      return Err.forbidden('无权删除此知识库')
     }
 
     // 级联删除：知识库 → 文档 → chunks
@@ -99,14 +79,9 @@ export async function DELETE(
       where: { id },
     })
 
-    return NextResponse.json({
-      message: '知识库已删除',
-    })
+    return R.noData()
   } catch (error) {
     console.error('[/api/kb DELETE] Error:', error)
-    return NextResponse.json(
-      { error: 'INTERNAL_ERROR', message: '删除知识库失败' },
-      { status: 500 }
-    )
+    return Err.internal('删除知识库失败')
   }
 }
