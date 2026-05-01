@@ -15,6 +15,8 @@ export function useDocList(kbId: string) {
   const [deleteDoc, setDeleteDoc] = useState<Doc | null>(null)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchDeleting, setBatchDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -86,7 +88,7 @@ export function useDocList(kbId: string) {
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return
 
-    const maxSize = 10 * 1024 * 1024
+    const maxSize = 50 * 1024 * 1024
 
     try {
       setUploading(true)
@@ -150,6 +152,44 @@ export function useDocList(kbId: string) {
     }
   }
 
+  const toggleSelect = (docId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(docId)) {
+        next.delete(docId)
+      } else {
+        next.add(docId)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(docs.map((d) => d.id)))
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+    try {
+      setBatchDeleting(true)
+      setError(null)
+      await http.post('/api/documents/batch-delete', {
+        ids: Array.from(selectedIds),
+      })
+      setDocs((prev) => prev.filter((d) => !selectedIds.has(d.id)))
+      if (previewDoc && selectedIds.has(previewDoc.id)) setPreviewDoc(null)
+      setSelectedIds(new Set())
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '批量删除失败')
+    } finally {
+      setBatchDeleting(false)
+    }
+  }
+
   return {
     docs, loading, loadingMore, hasMore: !!nextCursor, loadMore, error,
     dragging, setDragging,
@@ -157,5 +197,6 @@ export function useDocList(kbId: string) {
     deleteDoc, setDeleteDoc,
     handleDelete, onRetry, fileInputRef, handleFileSelect,
     uploading, deleting,
+    selectedIds, toggleSelect, toggleSelectAll, handleBatchDelete, batchDeleting,
   }
 }

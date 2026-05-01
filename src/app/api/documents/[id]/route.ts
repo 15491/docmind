@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { R, Err } from '@/lib/response'
+import { deleteDocumentChunks } from '@/lib/elasticsearch'
 
 // DELETE /api/documents/[id] — 删除文档
 export async function DELETE(
@@ -28,6 +29,14 @@ export async function DELETE(
 
     if (document.knowledgeBase.userId !== session.user.id) {
       return Err.forbidden('无权删除此文档')
+    }
+
+    // 清除 Elasticsearch 中的向量数据
+    try {
+      await deleteDocumentChunks(documentId)
+    } catch (err) {
+      console.error('[DELETE document] ES cleanup failed:', err)
+      // 继续执行 PG 删除，不阻断流程
     }
 
     await prisma.document.delete({ where: { id: documentId } })

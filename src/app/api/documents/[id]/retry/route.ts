@@ -52,14 +52,18 @@ export async function POST(
       data: { status: 'processing' },
     })
 
-    await documentQueue.add('process-document', {
-      documentId,
-      knowledgeBaseId: document.knowledgeBaseId,
-      userId: session.user.id,
-      fileName: document.fileName,
-      mimeType: document.mimeType,
-      objectKey: document.storageKey,
-    })
+    await documentQueue.add(
+      'process-document',
+      {
+        documentId,
+        knowledgeBaseId: document.knowledgeBaseId,
+        userId: session.user.id,
+        fileName: document.fileName,
+        mimeType: document.mimeType,
+        objectKey: document.storageKey,
+      },
+      { jobId: `doc-${documentId}` }
+    )
 
     return R.noData()
   } catch (error) {

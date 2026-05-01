@@ -114,10 +114,12 @@ model Document {
   fileSize        Int
   /// 文件 MIME 类型，如 application/pdf
   mimeType        String
-  /// 处理状态：processing | ready | failed
+  /// 处理状态：processing | uploading | ready | failed
   status          String          @default("processing")
   /// MinIO 对象存储路径
   storageKey      String?
+  /// 文件内容 MD5 哈希，用于重复检测
+  contentHash     String?
   /// 所属知识库 ID
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase   @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
@@ -127,6 +129,8 @@ model Document {
   createdAt       DateTime        @default(now())
   /// 最后更新时间
   updatedAt       DateTime        @updatedAt
+
+  @@unique([knowledgeBaseId, contentHash], name: "unique_doc_per_kb")
 }
 
 model DocumentChunk {

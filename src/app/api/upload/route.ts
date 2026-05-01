@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { createHash } from 'crypto'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { documentQueue } from '@/lib/queue'
@@ -7,7 +8,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { uploadFile } from '@/lib/minio'
 import { R, Err } from '@/lib/response'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 const ALLOWED_TYPES = [
   'application/pdf',
   'text/plain',
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     // 验证文件大小
     if (file.size > MAX_FILE_SIZE) {
-      return Err.invalid('文件大小超过 10MB 限制')
+      return Err.invalid('文件大小超过 50MB 限制')
     }
 
     // 验证文件类型
@@ -64,6 +65,28 @@ export async function POST(req: NextRequest) {
       return Err.forbidden('无权上传到此知识库')
     }
 
+    // 计算文件内容哈希
+    const fileBuffer = Buffer.from(await file.arrayBuffer())
+    const contentHash = createHash('md5').update(fileBuffer).digest('hex')
+
+    // 检查是否存在相同哈希的文档
+    const existingDoc = await prisma.document.findFirst({
+      where: {
+        knowledgeBaseId: kbId,
+        contentHash: contentHash,
+      },
+    })
+
+    if (existingDoc) {
+      if (existingDoc.status === 'ready') {
+        return Err.conflict(`文件已上传过，ID: ${existingDoc.id}`)
+      } else if (existingDoc.status === 'failed') {
+        return Err.conflict(`文件之前上传失败，请重试该文档：${existingDoc.id}`)
+      } else if (existingDoc.status === 'uploading') {
+        return Err.conflict('文件正在上传中，请稍后')
+      }
+    }
+
     // 创建 Document 记录，状态为 processing
     const document = await prisma.document.create({
       data: {
@@ -71,12 +94,12 @@ export async function POST(req: NextRequest) {
         fileSize: file.size,
         mimeType: file.type,
         status: 'processing',
+        contentHash: contentHash,
         knowledgeBaseId: kbId,
       },
     })
 
     // 上传文件到 MinIO
-    const fileBuffer = Buffer.from(await file.arrayBuffer())
     const objectKey = `documents/${document.id}/${file.name}`
 
     try {
