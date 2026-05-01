@@ -1,10 +1,11 @@
 import { Worker } from 'bullmq'
-import { readFile, unlink } from 'fs/promises'
+import { readFile, unlink, access } from 'fs/promises'
 import { existsSync } from 'fs'
 import { redis } from '@/lib/redis'
 import { prisma } from '@/lib/prisma'
 import { processDocument } from '@/lib/rag/document-processor'
 import type { DocumentJob } from '@/lib/queue'
+import { getTempDir } from '@/lib/temp-dir'
 
 let worker: Worker<DocumentJob> | null = null
 
@@ -18,16 +19,40 @@ export async function startWorker() {
       console.log(`[Worker] Processing job ${job.id}:`, job.data.documentId)
 
       try {
-        // 检查文件是否存在
-        if (!existsSync(job.data.filePath)) {
+        const filePath = job.data.filePath
+        const tempDir = getTempDir()
+
+        console.log(`[Worker] Expected temp dir: ${tempDir}`)
+        console.log(`[Worker] File path: ${filePath}`)
+
+        // 详细的文件检查
+        if (!existsSync(filePath)) {
+          // 文件不存在，检查临时目录是否存在
+          const tempDirExists = existsSync(tempDir)
+          console.warn(`[Worker] File not found: ${filePath}`)
+          console.warn(`[Worker] Temp dir exists: ${tempDirExists}`)
+
+          if (tempDirExists) {
+            const fs = require('fs')
+            const files = fs.readdirSync(tempDir)
+            console.warn(`[Worker] Files in temp dir: ${files.join(', ')}`)
+          }
+
           throw new Error(
-            `File not found: ${job.data.filePath}. Job attempt: ${job.attemptsMade + 1}/${job.opts.attempts}`
+            `File not found: ${filePath} (attempt ${job.attemptsMade + 1}/${job.opts.attempts})`
           )
         }
 
+        // 读取文件前再次验证可访问性
+        try {
+          await access(filePath)
+        } catch (err) {
+          throw new Error(`File not accessible: ${filePath}. ${err instanceof Error ? err.message : 'Unknown error'}`)
+        }
+
         const [buffer, user] = await Promise.all([
-          readFile(job.data.filePath).catch((err) => {
-            throw new Error(`Failed to read file: ${err.message}`)
+          readFile(filePath).catch((err) => {
+            throw new Error(`Failed to read file: ${err instanceof Error ? err.message : String(err)}`)
           }),
           prisma.user.findUnique({
             where: { id: job.data.userId },

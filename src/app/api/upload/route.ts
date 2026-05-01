@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { documentQueue } from '@/lib/queue'
 import type { DocumentJob } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
+import { getTempDir } from '@/lib/temp-dir'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = [
@@ -99,19 +100,27 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 写入项目内的临时文件目录
+    // 写入项目内的临时文件目录（使用绝对路径，确保跨进程一致）
     const fileBuffer = Buffer.from(await file.arrayBuffer())
-    const tempDir = join(process.cwd(), '.temp')
+    const tempDir = getTempDir()
 
     // 确保临时目录存在
     try {
       await mkdir(tempDir, { recursive: true })
-    } catch {
-      // 目录已存在或其他原因，忽略
+    } catch (err) {
+      console.error('[/api/upload] Failed to create temp dir:', err)
+      // 继续尝试，目录可能已存在
     }
 
     const tempPath = join(tempDir, `docmind-${document.id}`)
-    await writeFile(tempPath, fileBuffer)
+
+    try {
+      await writeFile(tempPath, fileBuffer)
+      console.log(`[/api/upload] File written to: ${tempPath}`)
+    } catch (err) {
+      console.error('[/api/upload] Failed to write file:', err)
+      throw err
+    }
 
     // 加入 BullMQ 队列（job 里只存路径）
     const job = await documentQueue.add(
