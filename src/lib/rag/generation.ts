@@ -4,7 +4,7 @@ export async function generateAnswer(props: {
   systemPrompt?: string
   maxTokens?: number
   apiKey?: string | null
-}): Promise<ReadableStream<string>> {
+}): Promise<ReadableStream<Uint8Array>> {
   const {
     prompt,
     systemPrompt = '你是一个专业的文档问答助手。请根据用户提供的文档内容进行回答，并在回答中引用具体的文档片段。',

@@ -8,3 +8,9 @@ export type Doc = {
   chunkCount?: number
   createdAt: string | Date
 }
+
+export type Kb = {
+  id: string
+  name: string
+  documentCount: number
+}

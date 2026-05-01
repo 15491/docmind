@@ -221,7 +221,7 @@ ${question}`
               data: {
                 role: 'assistant',
                 content: fullContent,
-                sources: sources as unknown as Record<string, unknown>,
+                sources: sources,
                 sessionId: session_record.id,
               },
             })

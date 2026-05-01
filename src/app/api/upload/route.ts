@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     await writeFile(tempPath, fileBuffer)
 
     // 加入 BullMQ 队列（job 里只存路径）
-    const job = await documentQueue.add<DocumentJob>(
+    const job = await documentQueue.add(
       'process-document',
       {
         documentId: document.id,

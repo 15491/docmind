@@ -61,7 +61,7 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
       const decoder = new TextDecoder()
       let buffer = ''
       let aiContent = ''
-      let aiId = crypto.randomUUID()
+      const aiId = crypto.randomUUID()
       let sources: Message['sources'] = []
 
       while (true) {
