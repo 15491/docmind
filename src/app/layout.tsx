@@ -8,12 +8,14 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap", // 立即使用系统字体，Google Fonts 加载后替换
 })
 
 const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap", // 立即使用系统字体，Google Fonts 加载后替换
 })
 
 export const metadata: Metadata = {
@@ -27,7 +29,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="zh-CN" className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full`}>
+    <html
+      lang="zh-CN"
+      className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full`}
+      style={{
+        // 字体栈：Google Font → 系统字体回退
+        fontFamily: `var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif)`
+      }}
+    >
       <body className="min-h-full font-sans bg-white text-[#0f0f10] antialiased">
         <Providers>{children}</Providers>
         <Toaster position="top-center" richColors />
