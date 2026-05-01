@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq'
 import { readFile, unlink } from 'fs/promises'
+import { existsSync } from 'fs'
 import { redis } from '@/lib/redis'
 import { prisma } from '@/lib/prisma'
 import { processDocument } from '@/lib/rag/document-processor'
@@ -17,8 +18,17 @@ export async function startWorker() {
       console.log(`[Worker] Processing job ${job.id}:`, job.data.documentId)
 
       try {
+        // 检查文件是否存在
+        if (!existsSync(job.data.filePath)) {
+          throw new Error(
+            `File not found: ${job.data.filePath}. Job attempt: ${job.attemptsMade + 1}/${job.opts.attempts}`
+          )
+        }
+
         const [buffer, user] = await Promise.all([
-          readFile(job.data.filePath),
+          readFile(job.data.filePath).catch((err) => {
+            throw new Error(`Failed to read file: ${err.message}`)
+          }),
           prisma.user.findUnique({
             where: { id: job.data.userId },
             select: { zhipuApiKey: true },
@@ -44,16 +54,28 @@ export async function startWorker() {
 
         return result
       } catch (error) {
-        console.error(`[Worker] Job ${job.id} error:`, error)
+        console.error(
+          `[Worker] Job ${job.id} error (attempt ${job.attemptsMade + 1}):`,
+          error instanceof Error ? error.message : error
+        )
         throw error
       } finally {
-        // 无论成功或失败，都清理临时文件
-        await unlink(job.data.filePath).catch(() => {})
+        // 清理临时文件（即使重试也会在最后清理）
+        if (job.progress === 100 || job.attemptsMade >= (job.opts.attempts ?? 1)) {
+          await unlink(job.data.filePath).catch(() => {
+            console.warn(`[Worker] Failed to clean up temp file: ${job.data.filePath}`)
+          })
+        }
       }
     },
     {
       connection: redis,
-      concurrency: 3, // 同时处理 3 个任务
+      concurrency: 3,
+      settings: {
+        maxStalledCount: 2, // 最多允许 2 次卡顿
+        stalledInterval: 5000, // 每 5 秒检查一次卡顿的任务
+        retryProcessDelay: 5000, // 重试前等待 5 秒
+      },
     }
   )
 

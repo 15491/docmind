@@ -14,13 +14,14 @@ export interface DocumentJob {
 export const documentQueue = new Queue<DocumentJob>('docmind-documents', {
   connection: redis,
   defaultJobOptions: {
-    attempts: 3, // 最多重试 3 次
+    attempts: 5, // 最多重试 5 次（考虑到临时文件可能延迟）
     backoff: {
       type: 'exponential',
-      delay: 2000, // 初始延迟 2 秒
+      delay: 3000, // 初始延迟 3 秒
+      multiplier: 1.5, // 每次延迟增加 1.5 倍
     },
     removeOnComplete: true,
-    removeOnFail: { count: 100 }, // 保留最近 100 条失败记录供排查，防止无限堆积
+    removeOnFail: { count: 100 }, // 保留最近 100 条失败记录供排查
   },
 })
 

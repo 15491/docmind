@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import { tmpdir } from 'os'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { documentQueue } from '@/lib/queue'
@@ -100,9 +99,18 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 写入临时文件，避免将大文件存入 Redis
+    // 写入项目内的临时文件目录
     const fileBuffer = Buffer.from(await file.arrayBuffer())
-    const tempPath = join(tmpdir(), `docmind-${document.id}`)
+    const tempDir = join(process.cwd(), '.temp')
+
+    // 确保临时目录存在
+    try {
+      await mkdir(tempDir, { recursive: true })
+    } catch {
+      // 目录已存在或其他原因，忽略
+    }
+
+    const tempPath = join(tempDir, `docmind-${document.id}`)
     await writeFile(tempPath, fileBuffer)
 
     // 加入 BullMQ 队列（job 里只存路径）
