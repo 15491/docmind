@@ -13,6 +13,7 @@ export interface ProcessDocumentProps {
   fileName: string
   documentId: string
   knowledgeBaseId: string
+  apiKey?: string | null
 }
 
 export interface ProcessingResult {
@@ -64,6 +65,7 @@ export async function processDocument(
     fileName,
     documentId,
     knowledgeBaseId,
+    apiKey,
   } = props
 
   try {
@@ -73,27 +75,26 @@ export async function processDocument(
     // 2️⃣ 文本分块（固定 token 数 + 重叠）
     const chunks = chunkText(text, 500, 50)
 
-    // 3️⃣ 批量向量化并保存 chunks
+    // 3️⃣ 批量并发向量化并保存 chunks（每批 10 个，避免逐条串行）
+    const BATCH_SIZE = 10
     let successCount = 0
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]
 
-      try {
-        // 调用 Zhipu AI Embedding API
-        const embedding = await embedText(chunk.text)
-
-        // 使用原生 SQL 保存到 DocumentChunk 表（Prisma 不能直接处理 pgvector）
-        const vectorString = `[${embedding.join(',')}]`
-        await prisma.$executeRaw`
-          INSERT INTO "DocumentChunk" (id, content, "chunkIndex", "documentId", embedding)
-          VALUES (${randomUUID()}, ${chunk.text}, ${i}, ${documentId}, ${vectorString}::vector(2048))
-        `
-
-        successCount++
-      } catch (error) {
-        console.error(`Failed to embed chunk ${i}:`, error)
-        // 继续处理下一个 chunk，不中断流程
-      }
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batch = chunks.slice(i, i + BATCH_SIZE)
+      const results = await Promise.allSettled(
+        batch.map(async (chunk, j) => {
+          const embedding = await embedText(chunk.text, apiKey)
+          const vectorString = `[${embedding.join(',')}]`
+          await prisma.$executeRaw`
+            INSERT INTO "DocumentChunk" (id, content, "chunkIndex", "documentId", embedding)
+            VALUES (${randomUUID()}, ${chunk.text}, ${i + j}, ${documentId}, ${vectorString}::vector(2048))
+          `
+        })
+      )
+      successCount += results.filter((r) => r.status === 'fulfilled').length
+      results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .forEach((r, j) => console.error(`Failed to embed chunk ${i + j}:`, r.reason))
     }
 
     // 4️⃣ 更新文档状态
@@ -103,11 +104,12 @@ export async function processDocument(
         data: { status: 'ready' },
       })
     } else if (successCount > 0) {
-      // 部分成功，标记为 partial
+      // 部分 chunk 向量化失败，整体标记为失败以便重试
       await prisma.document.update({
         where: { id: documentId },
-        data: { status: 'ready' },
+        data: { status: 'failed' },
       })
+      throw new Error(`Only ${successCount}/${chunks.length} chunks were successfully embedded`)
     } else {
       // 全部失败
       await prisma.document.update({

@@ -1,34 +1,49 @@
 "use client"
 
-import { useState, useTransition, useCallback } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
-import type { LoginForm } from "./types"
+import type { LoginStep } from "./types"
 
-export function useLoginForm() {
+export function useLoginFlow() {
   const router = useRouter()
-  const [form, setForm] = useState<LoginForm>({ email: "", password: "" })
+  const [step, setStep] = useState<LoginStep>("email")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [oauthProviders, setOauthProviders] = useState<string[]>([])
+  const [isChecking, startChecking] = useTransition()
+  const [isPending, startPending] = useTransition()
 
-  const set = (field: keyof LoginForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((prev) => ({ ...prev, [field]: e.target.value }))
-
-  const clear = useCallback((field: keyof LoginForm) => {
-    setForm((prev) => ({ ...prev, [field]: "" }))
-  }, [])
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    startTransition(async () => {
-      const result = await signIn("credentials", {
-        email: form.email,
-        password: form.password,
-        redirect: false,
+    setEmailError(null)
+    startChecking(async () => {
+      const res = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       })
+      const data = await res.json()
+      if (data.status === "not_found") {
+        setEmailError("该邮箱未注册")
+      } else if (data.status === "password") {
+        setStep("password")
+      } else if (data.status === "oauth") {
+        setOauthProviders(data.providers as string[])
+        setStep("oauth")
+      }
+    })
+  }
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    startPending(async () => {
+      const result = await signIn("credentials", { email, password, redirect: false })
       if (result?.error) {
-        toast.error("邮箱或密码不正确")
+        toast.error("密码不正确")
       } else {
         router.refresh()
         router.push("/dashboard")
@@ -36,5 +51,27 @@ export function useLoginForm() {
     })
   }
 
-  return { form, set, clear, showPassword, setShowPassword, handleSubmit, isPending }
+  const handleBack = () => {
+    setStep("email")
+    setPassword("")
+    setShowPassword(false)
+    setEmailError(null)
+  }
+
+  return {
+    step,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    showPassword,
+    setShowPassword,
+    emailError,
+    oauthProviders,
+    isChecking,
+    isPending,
+    handleEmailSubmit,
+    handlePasswordSubmit,
+    handleBack,
+  }
 }

@@ -40,24 +40,29 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // 获取会话列表
+    const cursor = req.nextUrl.searchParams.get('cursor') ?? undefined
+    const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') ?? 20), 50)
+
     const sessions = await prisma.chatSession.findMany({
       where: { knowledgeBaseId: kbId },
-      include: {
-        _count: {
-          select: { messages: true },
-        },
-      },
+      include: { _count: { select: { messages: true } } },
       orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     })
 
+    const hasMore = sessions.length > limit
+    const page = hasMore ? sessions.slice(0, limit) : sessions
+    const nextCursor = hasMore ? page[page.length - 1].id : null
+
     return NextResponse.json({
-      sessions: sessions.map(s => ({
+      sessions: page.map(s => ({
         id: s.id,
         title: s.title || '新对话',
         messageCount: s._count.messages,
         createdAt: s.createdAt,
       })),
+      nextCursor,
     })
   } catch (error) {
     console.error('[/api/sessions] Error:', error)

@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma'
 
 // 调用智谱AI Embedding API，获取文本向量
-export async function embedText(text: string): Promise<number[]> {
-  const apiKey = process.env.ZHIPU_API_KEY
-  if (!apiKey) {
+export async function embedText(text: string, apiKey?: string | null): Promise<number[]> {
+  const key = apiKey?.trim() || process.env.ZHIPU_API_KEY
+  if (!key) {
     throw new Error('Missing ZHIPU_API_KEY environment variable')
   }
 
@@ -11,7 +11,7 @@ export async function embedText(text: string): Promise<number[]> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
       model: 'embedding-3',

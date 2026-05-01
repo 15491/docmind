@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Plus, BookOpen, Loader } from "lucide-react"
 import { useSessionList } from "./hooks"
 import { useKbInfo } from "../../../hooks"
+import { KbContext } from "./kb-context"
 
 type Props = {
   children: React.ReactNode
@@ -15,7 +16,7 @@ type Props = {
 export default function ChatLayout({ children, params }: Props) {
   const { id } = use(params)
   const pathname = usePathname()
-  const { grouped, loading } = useSessionList(id)
+  const { grouped, loading, loadingMore, hasMore, loadMore } = useSessionList(id)
   const { kb } = useKbInfo(id)
 
   return (
@@ -75,10 +76,24 @@ export default function ChatLayout({ children, params }: Props) {
               </div>
             ))
           )}
+          {hasMore && (
+            <div className="px-2 pb-2">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full h-7 text-[11.5px] text-[#aaabb2] hover:text-zinc-600 hover:bg-[#ededf0] rounded-[6px] transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? "加载中…" : "加载更多"}
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-white">{children}</div>
+      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        <KbContext.Provider value={kb ?? null}>{children}</KbContext.Provider>
+      </div>
     </div>
   )
 }

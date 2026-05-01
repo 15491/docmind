@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { embedText, searchVectors } from '@/lib/rag/embeddings'
 import { generateAnswer, parseStreamContent } from '@/lib/rag/generation'
+import { rateLimit } from '@/lib/rate-limit'
+import { getUserApiKey } from '@/lib/get-api-key'
 
 interface ChatRequest {
   question: string
@@ -18,6 +20,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'UNAUTHORIZED' },
         { status: 401 }
+      )
+    }
+
+    const { ok } = await rateLimit(`rl:chat:${session.user.id}`, 20, 60)
+    if (!ok) {
+      return NextResponse.json(
+        { error: 'RATE_LIMITED', message: '操作过于频繁，请稍后再试' },
+        { status: 429 }
       )
     }
 
@@ -57,12 +67,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 获取用户的 API Key
+    const userApiKey = await getUserApiKey(session.user.id)
+
     // 创建或获取会话
     let session_record = sessionId
-      ? await prisma.chatSession.findUnique({
-        where: { id: sessionId },
-      })
+      ? await prisma.chatSession.findUnique({ where: { id: sessionId } })
       : null
+
+    if (session_record && session_record.knowledgeBaseId !== kbId) {
+      return NextResponse.json(
+        { error: 'FORBIDDEN', message: '会话不属于此知识库' },
+        { status: 403 }
+      )
+    }
 
     if (!session_record) {
       session_record = await prisma.chatSession.create({
@@ -85,7 +103,7 @@ export async function POST(req: NextRequest) {
     // 问题向量化
     let questionEmbedding: number[]
     try {
-      questionEmbedding = await embedText(question)
+      questionEmbedding = await embedText(question, userApiKey)
     } catch (error) {
       console.error('[/api/chat] Embedding error:', error)
       return NextResponse.json(
@@ -158,6 +176,7 @@ ${question}`
       glmResponse = await generateAnswer({
         prompt,
         systemPrompt: '你是一个专业的文档问答助手。请根据提供的文档内容准确回答用户问题，并在答案中引用具体的文档片段。',
+        apiKey: userApiKey,
       })
     } catch (error) {
       console.error('[/api/chat] Generation error:', error)
@@ -217,7 +236,21 @@ ${question}`
             controller.close()
           } catch (error) {
             console.error('[/api/chat] Stream error:', error)
-            controller.error(error)
+            try {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  `event: error\ndata: ${JSON.stringify({ message: '生成失败，请重试' })}\n\n`
+                )
+              )
+              controller.enqueue(
+                new TextEncoder().encode(
+                  `event: done\ndata: ${JSON.stringify({ sessionId: session_record.id })}\n\n`
+                )
+              )
+              controller.close()
+            } catch {
+              controller.error(error)
+            }
           }
         },
       }),

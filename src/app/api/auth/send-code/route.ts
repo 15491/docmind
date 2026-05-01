@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendVerifyCode, type VerifyPurpose } from "@/lib/verify-code"
 import { prisma } from "@/lib/prisma"
+import { rateLimit } from "@/lib/rate-limit"
 
 const VALID_PURPOSES: VerifyPurpose[] = ["register", "reset-password"]
 
@@ -13,6 +14,11 @@ export async function POST(req: NextRequest) {
 
   if (!purpose || !VALID_PURPOSES.includes(purpose as VerifyPurpose))
     return NextResponse.json({ error: "参数错误" }, { status: 422 })
+
+  // 每个邮箱每小时最多发 5 次（在 verify-code 60s 冷却之外的全局上限）
+  const { ok } = await rateLimit(`rl:send-code:${email}`, 5, 3600)
+  if (!ok)
+    return NextResponse.json({ error: "发送过于频繁，请稍后再试" }, { status: 429 })
 
   if (purpose === "register") {
     const existing = await prisma.user.findUnique({ where: { email } })

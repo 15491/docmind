@@ -1,5 +1,7 @@
 import { Worker } from 'bullmq'
+import { readFile, unlink } from 'fs/promises'
 import { redis } from '@/lib/redis'
+import { prisma } from '@/lib/prisma'
 import { processDocument } from '@/lib/rag/document-processor'
 import type { DocumentJob } from '@/lib/queue'
 
@@ -15,16 +17,21 @@ export async function startWorker() {
       console.log(`[Worker] Processing job ${job.id}:`, job.data.documentId)
 
       try {
-        // base64 字符串解码为 Buffer
-        const buffer = Buffer.from(job.data.buffer, 'base64')
+        const [buffer, user] = await Promise.all([
+          readFile(job.data.filePath),
+          prisma.user.findUnique({
+            where: { id: job.data.userId },
+            select: { zhipuApiKey: true },
+          }),
+        ])
 
-        // 调用文档处理器
         const result = await processDocument({
           buffer,
           mimeType: job.data.mimeType,
           fileName: job.data.fileName,
           documentId: job.data.documentId,
           knowledgeBaseId: job.data.knowledgeBaseId,
+          apiKey: user?.zhipuApiKey,
         })
 
         if (!result.success) {
@@ -39,6 +46,9 @@ export async function startWorker() {
       } catch (error) {
         console.error(`[Worker] Job ${job.id} error:`, error)
         throw error
+      } finally {
+        // 无论成功或失败，都清理临时文件
+        await unlink(job.data.filePath).catch(() => {})
       }
     },
     {

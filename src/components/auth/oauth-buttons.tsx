@@ -20,9 +20,11 @@ const GOOGLE_ICON = (
 const BTN_CLS =
   "w-full h-9 flex items-center justify-center gap-2 rounded-[8px] border-[1.5px] border-[#ebebed] text-[13px] font-medium text-[#35353d] hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 
-export function OAuthButtons({ mode }: { mode: "登录" | "注册" }) {
+export function OAuthButtons({ mode, providers }: { mode: "登录" | "注册"; providers?: string[] }) {
+  const show = (p: string) => !providers || providers.includes(p)
   return (
     <div className="space-y-2 mb-5">
+      {show("github") && (
       <button
         type="button"
         className={BTN_CLS}
@@ -31,6 +33,7 @@ export function OAuthButtons({ mode }: { mode: "登录" | "注册" }) {
         {GITHUB_ICON}
         GitHub {mode}
       </button>
+      )}
       {/* Google 登录暂时隐藏：国内 Node.js 服务器无法直连 Google OAuth 接口，
           待部署到海外服务器或配置服务端代理后再启用 */}
       {/* <button

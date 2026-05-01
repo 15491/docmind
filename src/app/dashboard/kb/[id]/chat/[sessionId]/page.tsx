@@ -4,14 +4,14 @@ import { use } from "react"
 import Link from "next/link"
 import { FileText, Send, Shield, Paperclip } from "lucide-react"
 import { useChat } from "../hooks"
-import { useKbInfo } from "../../../../hooks"
+import { useKb } from "../kb-context"
 import { AIAvatar } from "../components"
 
 export default function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = use(params)
-  const { kb } = useKbInfo(id)
+  const kb = useKb()
   const kbName = kb?.name ?? "知识库"
-  const { messages, input, setInput, streaming, textareaRef, bottomRef, handleSend } = useChat(id, sessionId)
+  const { messages, input, setInput, streaming, error, textareaRef, bottomRef, handleSend } = useChat(id, sessionId)
 
   return (
     <>
@@ -102,6 +102,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
       </div>
 
       <div className="px-6 pb-[18px] pt-3.5 border-t border-[#ebebed] bg-white flex-shrink-0">
+        {error && (
+          <div className="mb-2.5 px-3.5 py-2 rounded-[8px] bg-red-50 border border-red-200 text-[12px] text-red-600">
+            {error}
+          </div>
+        )}
         <div className="flex items-end gap-2.5 rounded-[14px] px-4 py-2.5 border-[1.5px] border-[#e2e2e8] bg-[#fafafa] focus-within:border-zinc-700 focus-within:bg-white focus-within:shadow-[0_0_0_3.5px_rgba(0,0,0,0.07)] transition-all">
           <textarea
             ref={textareaRef}

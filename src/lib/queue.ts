@@ -4,9 +4,10 @@ import { redis } from '@/lib/redis'
 export interface DocumentJob {
   documentId: string
   knowledgeBaseId: string
+  userId: string
   fileName: string
   mimeType: string
-  buffer: string // base64 编码的文件内容
+  filePath: string // 临时文件路径，worker 处理后自动删除
 }
 
 // 初始化文档处理队列
@@ -18,7 +19,8 @@ export const documentQueue = new Queue<DocumentJob>('docmind-documents', {
       type: 'exponential',
       delay: 2000, // 初始延迟 2 秒
     },
-    removeOnComplete: true, // 完成后删除任务
+    removeOnComplete: true,
+    removeOnFail: { count: 100 }, // 保留最近 100 条失败记录供排查，防止无限堆积
   },
 })
 

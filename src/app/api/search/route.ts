@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { embedText } from '@/lib/rag/embeddings'
+import { rateLimit } from '@/lib/rate-limit'
+import { getUserApiKey } from '@/lib/get-api-key'
 
 interface SearchRequest {
   query: string
@@ -28,6 +30,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const { ok } = await rateLimit(`rl:search:${session.user.id}`, 30, 60)
+    if (!ok) {
+      return NextResponse.json(
+        { error: 'RATE_LIMITED', message: '搜索过于频繁，请稍后再试' },
+        { status: 429 }
+      )
+    }
+
     const body = await req.json() as SearchRequest
     const { query, topK = 10 } = body
 
@@ -38,8 +48,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 获取用户的 API Key
+    const userApiKey = await getUserApiKey(session.user.id)
+
     // 获取查询的向量表示
-    const queryEmbedding = await embedText(query.trim())
+    const queryEmbedding = await embedText(query.trim(), userApiKey)
     const vectorString = `[${queryEmbedding.join(',')}]`
 
     // 跨知识库向量搜索

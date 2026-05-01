@@ -3,24 +3,35 @@
 import { useState } from "react"
 import { Check, Eye, EyeOff } from "lucide-react"
 
-export function SaveButton({ onSave }: { onSave: () => void }) {
-  const [saved, setSaved] = useState(false)
-  const handle = () => {
-    onSave()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle")
+
+  const handle = async () => {
+    if (state === "saving") return
+    setState("saving")
+    try {
+      await onSave()
+      setState("saved")
+      setTimeout(() => setState("idle"), 2000)
+    } catch {
+      setState("idle")
+    }
   }
+
   return (
     <button
       type="button"
       onClick={handle}
-      className="h-8 px-4 rounded-[8px] text-[12.5px] font-semibold transition-all flex items-center gap-1.5"
-      style={saved
+      disabled={state === "saving"}
+      className="h-8 px-4 rounded-[8px] text-[12.5px] font-semibold transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+      style={state === "saved"
         ? { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }
         : { background: "#18181b", color: "#fff" }
       }
     >
-      {saved ? <><Check size={12} strokeWidth={2.5} />已保存</> : "保存更改"}
+      {state === "saved"
+        ? <><Check size={12} strokeWidth={2.5} />已保存</>
+        : state === "saving" ? "保存中…" : "保存更改"}
     </button>
   )
 }

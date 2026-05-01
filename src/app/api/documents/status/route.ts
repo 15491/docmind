@@ -40,26 +40,31 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // 获取所有文档及其 chunks 数量
+    const cursor = req.nextUrl.searchParams.get('cursor') ?? undefined
+    const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') ?? 20), 100)
+
     const documents = await prisma.document.findMany({
       where: { knowledgeBaseId: kbId },
-      include: {
-        _count: {
-          select: { chunks: true },
-        },
-      },
+      include: { _count: { select: { chunks: true } } },
       orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     })
 
+    const hasMore = documents.length > limit
+    const page = hasMore ? documents.slice(0, limit) : documents
+    const nextCursor = hasMore ? page[page.length - 1].id : null
+
     return NextResponse.json({
-      documents: documents.map(doc => ({
+      documents: page.map(doc => ({
         id: doc.id,
         fileName: doc.fileName,
         fileSize: doc.fileSize,
-        status: doc.status, // processing | ready | failed
+        status: doc.status,
         chunkCount: doc._count.chunks,
         createdAt: doc.createdAt,
       })),
+      nextCursor,
     })
   } catch (error) {
     console.error('[/api/documents/status] Error:', error)

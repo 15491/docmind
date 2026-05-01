@@ -6,10 +6,10 @@ import { TriangleAlert } from "lucide-react"
 
 export default function DashboardError({
   error,
-  unstable_retry,
+  reset,
 }: {
   error: Error & { digest?: string }
-  unstable_retry: () => void
+  reset: () => void
 }) {
   useEffect(() => {
     console.error(error)
@@ -31,7 +31,7 @@ export default function DashboardError({
       </div>
       <div className="flex items-center gap-2">
         <button
-          onClick={unstable_retry}
+          onClick={reset}
           className="h-9 px-5 rounded-[9px] bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-700 transition-colors"
         >
           重试

@@ -12,7 +12,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
   const { id } = use(params)
   const { kb } = useKbInfo(id)
   const kbName = kb?.name ?? "知识库"
-  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, fileInputRef, handleFileSelect, loading, error } = useDocList(id)
+  const { docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, fileInputRef, handleFileSelect, loading, loadingMore, hasMore, loadMore, error } = useDocList(id)
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -153,6 +153,18 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
                 </tbody>
               </table>
             </div>
+            {hasMore && (
+              <div className="mt-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="h-8 px-4 rounded-[8px] border border-[#ebebed] text-[12px] font-medium text-[#62636b] hover:bg-zinc-50 hover:border-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? "加载中…" : "加载更多"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

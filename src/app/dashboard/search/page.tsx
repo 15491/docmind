@@ -7,7 +7,7 @@ import { ScoreBadge } from "./components"
 import { useSearch } from "./hooks"
 
 export default function SearchPage() {
-  const { query, setQuery, results, searched, loading, handleSearch } = useSearch()
+  const { query, setQuery, results, searched, loading, error, handleSearch } = useSearch()
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -64,7 +64,13 @@ export default function SearchPage() {
           </div>
         )}
 
-        {searched && !loading && (
+        {error && searched && !loading && (
+          <div className="mt-5 px-4 py-3 rounded-[10px] bg-red-50 border border-red-200 text-[12.5px] text-red-600">
+            {error}
+          </div>
+        )}
+
+        {searched && !loading && !error && (
           <div className="mt-6">
             <p className="text-[11px] font-semibold text-[#c0c0c8] uppercase tracking-wider mb-3">
               找到 {results.length} 条结果

@@ -31,7 +31,7 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
     try {
       setError(null)
       const userMessage: Message = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         role: "user",
         content,
       }
@@ -61,7 +61,7 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
       const decoder = new TextDecoder()
       let buffer = ''
       let aiContent = ''
-      let aiId = (Date.now() + 1).toString()
+      let aiId = crypto.randomUUID()
       let sources: Message['sources'] = []
 
       while (true) {
@@ -103,6 +103,15 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
               } catch {
                 // 忽略 JSON 解析错误
               }
+            }
+            i += 2
+          } else if (line.startsWith('event: error')) {
+            const dataLine = lines[i + 1]
+            if (dataLine?.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(dataLine.slice(6)) as { message: string }
+                setError(data.message)
+              } catch { /* ignore */ }
             }
             i += 2
           } else if (line.startsWith('event: done')) {
@@ -157,16 +166,21 @@ function groupSessionsByDate(sessions: Session[]): Record<string, Session[]> {
 }
 
 export function useSessionList(kbId: string) {
+  const [sessions, setSessions] = useState<Session[]>([])
   const [grouped, setGrouped] = useState<Record<string, Session[]>>({})
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
 
   const fetchSessions = async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/sessions?kbId=${kbId}`)
       if (!response.ok) throw new Error('Failed to fetch sessions')
-      const data = await response.json() as { sessions: Session[] }
+      const data = await response.json() as { sessions: Session[]; nextCursor: string | null }
+      setSessions(data.sessions ?? [])
       setGrouped(groupSessionsByDate(data.sessions ?? []))
+      setNextCursor(data.nextCursor ?? null)
     } catch (err) {
       console.error('Failed to fetch sessions:', err)
     } finally {
@@ -174,9 +188,27 @@ export function useSessionList(kbId: string) {
     }
   }
 
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    try {
+      setLoadingMore(true)
+      const response = await fetch(`/api/sessions?kbId=${kbId}&cursor=${nextCursor}`)
+      if (!response.ok) throw new Error('Failed to fetch sessions')
+      const data = await response.json() as { sessions: Session[]; nextCursor: string | null }
+      const merged = [...sessions, ...(data.sessions ?? [])]
+      setSessions(merged)
+      setGrouped(groupSessionsByDate(merged))
+      setNextCursor(data.nextCursor ?? null)
+    } catch (err) {
+      console.error('Failed to load more sessions:', err)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
   useEffect(() => {
     fetchSessions()
   }, [kbId])
 
-  return { grouped, loading, refresh: fetchSessions }
+  return { grouped, loading, loadingMore, hasMore: !!nextCursor, loadMore, refresh: fetchSessions }
 }

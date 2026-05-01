@@ -5,7 +5,7 @@ import { SaveButton, FieldRow, TextInput, MaskInput, RangeInput } from "./form"
 import { useProfileForm, useApiForm, useRagConfig, useDangerZone } from "./hooks"
 
 export function ProfileSection() {
-  const { nickname, setNickname, email, setEmail, oldPwd, setOldPwd, newPwd, setNewPwd } = useProfileForm()
+  const { nickname, setNickname, email, oldPwd, setOldPwd, newPwd, setNewPwd, handleSave } = useProfileForm()
   return (
     <div>
       <div className="mb-5">
@@ -18,8 +18,8 @@ export function ProfileSection() {
           <FieldRow label="昵称" hint="显示在对话界面右下角">
             <TextInput value={nickname} onChange={setNickname} placeholder="你的名字" />
           </FieldRow>
-          <FieldRow label="邮箱" hint="用于登录和通知">
-            <TextInput value={email} onChange={setEmail} type="email" placeholder="you@example.com" />
+          <FieldRow label="邮箱" hint="用于登录和通知，暂不支持修改">
+            <TextInput value={email} onChange={() => {}} type="email" placeholder="you@example.com" />
           </FieldRow>
         </div>
       </div>
@@ -35,14 +35,14 @@ export function ProfileSection() {
         </div>
       </div>
       <div className="flex justify-end">
-        <SaveButton onSave={() => {}} />
+        <SaveButton onSave={handleSave} />
       </div>
     </div>
   )
 }
 
 export function ApiSection() {
-  const { glmKey, setGlmKey, embKey, setEmbKey, baseUrl, setBaseUrl } = useApiForm()
+  const { glmKey, setGlmKey, baseUrl, setBaseUrl, handleSave } = useApiForm()
   return (
     <div>
       <div className="mb-5">
@@ -52,11 +52,8 @@ export function ApiSection() {
       <div className="mb-6">
         <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider mb-3">智谱 AI</p>
         <div className="bg-white border border-[#ebebed] rounded-[10px] px-5">
-          <FieldRow label="GLM-4-Flash Key" hint="用于对话生成">
+          <FieldRow label="API Key" hint="GLM-4-Flash 对话与 Embedding-3 向量化共用同一密钥">
             <MaskInput value={glmKey} onChange={setGlmKey} placeholder="sk-••••••••••••••••" />
-          </FieldRow>
-          <FieldRow label="Embedding-3 Key" hint="用于文档向量化">
-            <MaskInput value={embKey} onChange={setEmbKey} placeholder="sk-••••••••••••••••" />
           </FieldRow>
           <FieldRow label="API Base URL" hint="可使用自定义代理地址">
             <TextInput value={baseUrl} onChange={setBaseUrl} />
@@ -77,14 +74,14 @@ export function ApiSection() {
         </p>
       </div>
       <div className="flex justify-end">
-        <SaveButton onSave={() => {}} />
+        <SaveButton onSave={handleSave} />
       </div>
     </div>
   )
 }
 
 export function RagSection() {
-  const { chunkSize, setChunkSize, overlap, setOverlap, topK, setTopK, temperature, setTemperature } = useRagConfig()
+  const { chunkSize, setChunkSize, overlap, setOverlap, topK, setTopK, temperature, setTemperature, handleSave } = useRagConfig()
   return (
     <div>
       <div className="mb-5">
@@ -114,14 +111,14 @@ export function RagSection() {
         </div>
       </div>
       <div className="flex justify-end">
-        <SaveButton onSave={() => {}} />
+        <SaveButton onSave={handleSave} />
       </div>
     </div>
   )
 }
 
 export function DangerSection() {
-  const { confirm, setConfirm } = useDangerZone()
+  const { confirm, setConfirm, clearing, deleting, handleClearKbs, handleDeleteAccount } = useDangerZone()
   return (
     <div>
       <div className="mb-5">
@@ -134,8 +131,13 @@ export function DangerSection() {
             <p className="text-[13px] font-semibold text-[#35353d]">清空所有知识库</p>
             <p className="text-[12px] text-[#aaabb2] mt-0.5">删除所有文档和向量索引，对话记录保留</p>
           </div>
-          <button type="button" className="h-8 px-3.5 rounded-[8px] border border-amber-200 bg-amber-50 text-amber-700 text-[12px] font-semibold hover:bg-amber-100 transition-colors flex-shrink-0">
-            清空知识库
+          <button
+            type="button"
+            onClick={handleClearKbs}
+            disabled={clearing}
+            className="h-8 px-3.5 rounded-[8px] border border-amber-200 bg-amber-50 text-amber-700 text-[12px] font-semibold hover:bg-amber-100 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {clearing ? "清空中…" : "清空知识库"}
           </button>
         </div>
         <div className="bg-white border border-red-100 rounded-[10px] p-5">
@@ -160,11 +162,12 @@ export function DangerSection() {
               />
               <button
                 type="button"
-                disabled={confirm !== "DELETE"}
+                onClick={handleDeleteAccount}
+                disabled={confirm !== "DELETE" || deleting}
                 className="h-9 px-4 rounded-[8px] text-[12.5px] font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 style={{ background: "#ef4444", color: "#fff" }}
               >
-                注销账户
+                {deleting ? "注销中…" : "注销账户"}
               </button>
             </div>
           </div>

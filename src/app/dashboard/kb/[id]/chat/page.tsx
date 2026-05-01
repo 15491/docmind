@@ -5,12 +5,12 @@ import Link from "next/link"
 import { FileText, Send, Shield, Paperclip, Upload, Sparkles } from "lucide-react"
 import { SUGGESTIONS } from "./constants"
 import { useChat } from "./hooks"
-import { useKbInfo } from "../../../hooks"
+import { useKb } from "./kb-context"
 import { AIAvatar } from "./components"
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { kb } = useKbInfo(id)
+  const kb = useKb()
   const kbName = kb?.name ?? "知识库"
   const docCount = kb?.documentCount ?? 0
   const { messages, input, setInput, streaming, error, textareaRef, bottomRef, handleSend } = useChat(id)
@@ -101,7 +101,9 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         {messages.length > 0 && (
           <div className="flex items-center gap-3 px-6">
             <div className="flex-1 h-px bg-[#f0f0f3]" />
-            <span className="text-[11px] text-[#aaabb2] font-medium">2026年4月24日</span>
+            <span className="text-[11px] text-[#aaabb2] font-medium">
+              {new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}
+            </span>
             <div className="flex-1 h-px bg-[#f0f0f3]" />
           </div>
         )}
@@ -170,6 +172,11 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       </div>
 
       <div className="px-6 pb-[18px] pt-3.5 border-t border-[#ebebed] bg-white flex-shrink-0">
+        {error && (
+          <div className="mb-2.5 px-3.5 py-2 rounded-[8px] bg-red-50 border border-red-200 text-[12px] text-red-600">
+            {error}
+          </div>
+        )}
         <div className={`flex items-end gap-2.5 rounded-[14px] px-4 py-2.5 transition-all ${
           streaming
             ? "border-[1.5px] border-[#e2e2e8] bg-[#fafafa]"

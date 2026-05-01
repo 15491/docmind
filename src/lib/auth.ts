@@ -1,5 +1,9 @@
-import NextAuth, { type DefaultSession } from "next-auth"
+import NextAuth, { type DefaultSession, CredentialsSignin } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+
+class OAuthOnlyAccount extends CredentialsSignin {
+  code = "oauth_only"
+}
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
@@ -28,7 +32,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null
 
         const user = await prisma.user.findUnique({ where: { email } })
-        if (!user?.passwordHash) return null
+        if (!user) return null
+        if (!user.passwordHash) throw new OAuthOnlyAccount()
 
         const valid = await bcrypt.compare(password, user.passwordHash)
         if (!valid) return null

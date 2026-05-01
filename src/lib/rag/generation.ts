@@ -3,15 +3,17 @@ export async function generateAnswer(props: {
   prompt: string
   systemPrompt?: string
   maxTokens?: number
+  apiKey?: string | null
 }): Promise<ReadableStream<string>> {
   const {
     prompt,
     systemPrompt = '你是一个专业的文档问答助手。请根据用户提供的文档内容进行回答，并在回答中引用具体的文档片段。',
     maxTokens = 1024,
+    apiKey,
   } = props
 
-  const apiKey = process.env.ZHIPU_API_KEY
-  if (!apiKey) {
+  const key = apiKey?.trim() || process.env.ZHIPU_API_KEY
+  if (!key) {
     throw new Error('Missing ZHIPU_API_KEY environment variable')
   }
 
@@ -19,7 +21,7 @@ export async function generateAnswer(props: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
       model: 'glm-4-flash',

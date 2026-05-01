@@ -60,9 +60,9 @@ export function chunkText(
       endIndex: actualEndIndex,
     })
 
-    // 滑窗重叠
+    // 滑窗重叠；若重叠后退至当前块起点或更早则跳过重叠，防止死循环
     startIndex = actualEndIndex - overlapChars
-    if (startIndex <= chunks[chunks.length - 2]?.endIndex ?? 0) {
+    if (startIndex <= (chunks[chunks.length - 1]?.startIndex ?? 0)) {
       startIndex = actualEndIndex
     }
   }

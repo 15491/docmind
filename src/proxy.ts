@@ -4,7 +4,7 @@ import { authConfig } from "@/lib/auth.config"
 
 const { auth } = NextAuth(authConfig)
 
-export default auth((req) => {
+export const proxy = auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
 
@@ -12,7 +12,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  if ((pathname === "/login" || pathname === "/register") && session) {
+  if ((pathname === "/login" || pathname === "/register" || pathname === "/reset-password") && session) {
     return NextResponse.redirect(new URL("/dashboard", req.url))
   }
 })

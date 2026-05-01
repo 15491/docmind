@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { writeFile } from 'fs/promises'
+import { join } from 'path'
+import { tmpdir } from 'os'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { documentQueue } from '@/lib/queue'
 import type { DocumentJob } from '@/lib/queue'
+import { rateLimit } from '@/lib/rate-limit'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = [
@@ -20,6 +24,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'UNAUTHORIZED' },
         { status: 401 }
+      )
+    }
+
+    const { ok } = await rateLimit(`rl:upload:${session.user.id}`, 10, 3600)
+    if (!ok) {
+      return NextResponse.json(
+        { error: 'RATE_LIMITED', message: '上传过于频繁，每小时最多 10 次' },
+        { status: 429 }
       )
     }
 
@@ -88,19 +100,21 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 将文件转换为 Buffer 并 base64 编码
-    const buffer = await file.arrayBuffer()
-    const base64Buffer = Buffer.from(buffer).toString('base64')
+    // 写入临时文件，避免将大文件存入 Redis
+    const fileBuffer = Buffer.from(await file.arrayBuffer())
+    const tempPath = join(tmpdir(), `docmind-${document.id}`)
+    await writeFile(tempPath, fileBuffer)
 
-    // 加入 BullMQ 队列
+    // 加入 BullMQ 队列（job 里只存路径）
     const job = await documentQueue.add<DocumentJob>(
       'process-document',
       {
         documentId: document.id,
         knowledgeBaseId: kbId,
+        userId: session.user.id,
         fileName: file.name,
         mimeType: file.type,
-        buffer: base64Buffer,
+        filePath: tempPath,
       },
       {
         jobId: `doc-${document.id}`,
