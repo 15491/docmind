@@ -74,11 +74,23 @@ The app requires these running services (see `.env.example`):
 
 - **PostgreSQL** — primary database (Prisma ORM)
 - **Redis** — BullMQ job queue + rate limiting
-- **MinIO** — document object storage
-- **Elasticsearch** — vector/KNN search (index: `docmind-chunks`, 2048-dim cosine)
-- **Zhipu AI** — GLM-4-Flash (chat) + embedding-3 (vectors)
-- **Resend** — transactional email (verification codes, password reset)
+- **MinIO** — document object storage (S3-compatible)
+- **Elasticsearch** — vector/KNN search (index: `docmind-chunks`, dense_vector 1024-dim)
+- **Zhipu AI** — GLM-4-Flash (chat) + embedding-3 (vectors) — _external API, requires API key_
+- **Resend** — transactional email (verification codes, password reset) — _external API, requires API key_
+- **Tavily** — real-time web search (optional) — _external API, free tier 1000/month_
 
-On startup (`instrumentation.ts`), the app auto-creates the MinIO bucket and Elasticsearch index if missing, then starts the BullMQ worker.
+**Startup sequence** (`instrumentation.ts`):
+1. Init MinIO client → auto-create bucket if missing
+2. Init Elasticsearch client → auto-create index (`docmind-chunks`) if missing
+3. Start BullMQ worker in the same process
 
-Run the worker standalone in production: `pnpm worker`
+**Production deployment**:
+- Web server and Worker can run in the same process (default) or separate processes (`pnpm start` + `pnpm worker`)
+- For high throughput, separate Worker process recommended
+- Redis persistence must be enabled for job durability
+- Elasticsearch requires 2GB+ memory; MinIO requires adequate disk space for document storage
+
+Deployment guides:
+- **VPS**: [DEPLOYMENT.md](./DEPLOYMENT.md) — Cloud server setup (Ubuntu, Docker Compose, Nginx, HTTPS)
+- **Laptop**: [DEPLOYMENT_LAPTOP.md](./DEPLOYMENT_LAPTOP.md) — Personal computer setup (Cloudflare Tunnel, 24/7 configuration)
