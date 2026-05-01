@@ -1,7 +1,8 @@
-import { redis } from './redis'
+import { rateLimitRedis } from './redis'
 
 /**
  * 基于 Redis 的滑动窗口限流（原子操作）。
+ * 使用独立的 Redis 连接，快速失败不重试。
  * @returns ok=false 时应返回 429
  */
 export async function rateLimit(
@@ -17,6 +18,6 @@ export async function rateLimit(
     return count
   `
 
-  const count = await redis.eval(script, 1, key, windowSeconds) as number
+  const count = await rateLimitRedis.eval(script, 1, key, windowSeconds) as number
   return { ok: count <= max, remaining: Math.max(0, max - count) }
 }
