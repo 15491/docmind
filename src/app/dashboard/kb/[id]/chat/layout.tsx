@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Plus, BookOpen, Loader } from "lucide-react"
@@ -16,8 +16,14 @@ type Props = {
 export default function ChatLayout({ children, params }: Props) {
   const { id } = use(params)
   const pathname = usePathname()
-  const { grouped, loading, loadingMore, hasMore, loadMore } = useSessionList(id)
+  const { grouped, loading, loadingMore, hasMore, loadMore, refresh } = useSessionList(id)
   const { kb } = useKbInfo(id)
+  const isNewChat = pathname === `/dashboard/kb/${id}/chat`
+
+  // 路由变化时刷新会话列表（新建会话后 router.replace 会触发此处）
+  useEffect(() => {
+    refresh()
+  }, [pathname])
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -30,7 +36,11 @@ export default function ChatLayout({ children, params }: Props) {
             </div>
             <span className="text-[12.5px] font-semibold text-[#35353d] truncate">{kb?.name ?? "知识库"}</span>
           </div>
-          <Link href={`/dashboard/kb/${id}/chat`} className="w-full h-8 flex items-center justify-center gap-1.5 rounded-[8px] border-[1.5px] border-dashed border-[#d8d8de] text-[12px] font-medium text-[#aaabb2] hover:border-zinc-500 hover:text-zinc-600 hover:bg-zinc-100 hover:border-solid transition-all">
+          <Link href={`/dashboard/kb/${id}/chat`} className={`w-full h-8 flex items-center justify-center gap-1.5 rounded-[8px] border-[1.5px] text-[12px] font-medium transition-all ${
+            isNewChat
+              ? "border-zinc-700 bg-zinc-900 text-white border-solid"
+              : "border-dashed border-[#d8d8de] text-[#aaabb2] hover:border-zinc-500 hover:text-zinc-600 hover:bg-zinc-100 hover:border-solid"
+          }`}>
             <Plus size={12} strokeWidth={2.5} />
             新建会话
           </Link>

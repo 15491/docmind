@@ -1,15 +1,19 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { http } from "@/lib/request"
 import type { Message } from "./types"
 
 export function useChat(kbId: string, sessionId?: string, initialMessages: Message[] = []) {
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 新建对话时服务端创建的 sessionId，后续消息复用同一会话
+  const activeSessionId = useRef<string | undefined>(sessionId)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -45,7 +49,7 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: content, kbId, sessionId }),
+        body: JSON.stringify({ question: content, kbId, sessionId: activeSessionId.current }),
       })
 
       if (!response.ok) {
@@ -116,6 +120,17 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
             }
             i += 2
           } else if (line.startsWith('event: done')) {
+            const dataLine = lines[i + 1]
+            if (dataLine?.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(dataLine.slice(6)) as { sessionId?: string }
+                if (data.sessionId && !activeSessionId.current) {
+                  // 新建对话：记录 sessionId，并把 URL 替换为会话页，避免刷新后丢失
+                  activeSessionId.current = data.sessionId
+                  router.replace(`/dashboard/kb/${kbId}/chat/${data.sessionId}`)
+                }
+              } catch { /* ignore */ }
+            }
             i += 2
           } else {
             i++
