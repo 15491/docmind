@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { embedText } from '@/lib/rag/embeddings'
 import { rateLimit } from '@/lib/rate-limit'
 import { getUserContext } from '@/lib/get-api-key'
 import { searchChunks } from '@/lib/elasticsearch'
+import { withAuth } from '@/lib/with-auth'
 import { R, Err } from '@/lib/response'
 
 interface SearchRequest {
@@ -22,43 +22,25 @@ interface SearchResult {
   content: string
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, _ctx, userId) => {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return Err.unauthorized()
-    }
-
-    const { ok } = await rateLimit(`rl:search:${session.user.id}`, 30, 60)
-    if (!ok) {
-      return Err.tooMany('搜索过于频繁，请稍后再试')
-    }
+    const { ok } = await rateLimit(`rl:search:${userId}`, 30, 60)
+    if (!ok) return Err.tooMany('搜索过于频繁，请稍后再试')
 
     const body = await req.json() as SearchRequest
     const { query, topK: rawTopK } = body
 
-    if (!query || query.trim().length === 0) {
-      return Err.invalid('搜索关键词不能为空')
-    }
+    if (!query || query.trim().length === 0) return Err.invalid('搜索关键词不能为空')
 
-    // 一次查询获取 API Key + RAG 配置
-    const { apiKey: userApiKey, ragConfig } = await getUserContext(session.user.id)
-    // 请求方指定的 topK 优先，否则用用户配置，再否则用默认 10
+    const { apiKey: userApiKey, ragConfig } = await getUserContext(userId)
     const topK = rawTopK !== undefined
       ? Math.min(Math.max(Math.floor(rawTopK), 1), 50)
       : Math.min(ragConfig.topK, 50)
 
-    // 获取查询的向量表示
     const queryEmbedding = await embedText(query.trim(), userApiKey)
 
-    // 跨知识库向量搜索（Elasticsearch）
-    const esResults = await searchChunks({
-      embedding: queryEmbedding,
-      userId: session.user.id,
-      topK,
-    })
+    const esResults = await searchChunks({ embedding: queryEmbedding, userId, topK })
 
-    // 获取 Document 和 KnowledgeBase 信息
     const documentIds = [...new Set(esResults.map(r => r.documentId))]
     const documents = await prisma.document.findMany({
       where: { id: { in: documentIds }, status: 'ready' },
@@ -88,18 +70,10 @@ export async function POST(req: NextRequest) {
       })
       .filter((r): r is SearchResult => r !== null)
 
-    return R.ok({
-      success: true,
-      results: searchResults,
-      count: searchResults.length,
-    })
+    return R.ok({ success: true, results: searchResults, count: searchResults.length })
   } catch (error) {
     console.error('[/api/search] Error:', error)
-
-    if (error instanceof SyntaxError) {
-      return Err.invalid('请求体格式错误')
-    }
-
+    if (error instanceof SyntaxError) return Err.invalid('请求体格式错误')
     return Err.internal('搜索失败，请稍后重试')
   }
-}
+})

@@ -1,18 +1,11 @@
-import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 import { R, Err } from '@/lib/response'
 
 // DELETE /api/sessions/[id] — 删除会话及其所有消息
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (_req, ctx, userId) => {
   try {
-    const session = await auth()
-    if (!session?.user?.id) return Err.unauthorized()
-
-    const { id } = await params
+    const { id } = await ctx.params
 
     const chatSession = await prisma.chatSession.findUnique({
       where: { id },
@@ -20,7 +13,7 @@ export async function DELETE(
     })
 
     if (!chatSession) return Err.notFound('会话不存在')
-    if (chatSession.knowledgeBase.userId !== session.user.id) return Err.forbidden('无权删除此会话')
+    if (chatSession.knowledgeBase.userId !== userId) return Err.forbidden('无权删除此会话')
 
     await prisma.chatSession.delete({ where: { id } })
 
@@ -29,4 +22,4 @@ export async function DELETE(
     console.error('[DELETE /api/sessions/[id]] Error:', error)
     return Err.internal('删除会话失败')
   }
-}
+})

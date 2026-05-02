@@ -1,33 +1,17 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 import { R, Err } from '@/lib/response'
 
 // GET /api/sessions?kbId=xxx — 查询知识库的所有会话
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, _ctx, userId) => {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return Err.unauthorized()
-    }
-
     const kbId = req.nextUrl.searchParams.get('kbId')
-    if (!kbId) {
-      return Err.invalid('缺少 kbId 参数')
-    }
+    if (!kbId) return Err.invalid('缺少 kbId 参数')
 
-    // 验证知识库归属权
-    const kb = await prisma.knowledgeBase.findUnique({
-      where: { id: kbId },
-    })
-
-    if (!kb) {
-      return Err.notFound('知识库不存在')
-    }
-
-    if (kb.userId !== session.user.id) {
-      return Err.forbidden('无权访问此知识库')
-    }
+    const kb = await prisma.knowledgeBase.findUnique({ where: { id: kbId } })
+    if (!kb) return Err.notFound('知识库不存在')
+    if (kb.userId !== userId) return Err.forbidden('无权访问此知识库')
 
     const cursor = req.nextUrl.searchParams.get('cursor') ?? undefined
     const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') ?? 20), 50)
@@ -57,4 +41,4 @@ export async function GET(req: NextRequest) {
     console.error('[/api/sessions] Error:', error)
     return Err.internal('获取会话列表失败')
   }
-}
+})

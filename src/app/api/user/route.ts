@@ -1,14 +1,19 @@
-import { auth } from '@/lib/auth'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 import { R, Err } from '@/lib/response'
 
-// GET /api/user — 获取当前登录用户信息
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return Err.unauthorized()
+interface RagConfigBody {
+  chunkSize?: number
+  overlap?: number
+  topK?: number
+  temperature?: number
+}
 
+// GET /api/user — 获取当前登录用户信息
+export const GET = withAuth(async (_req, _ctx, userId) => {
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: { id: true, name: true, email: true, image: true, passwordHash: true, zhipuApiKey: true, ragConfig: true },
   })
   if (!user) return Err.notFound('NOT_FOUND')
@@ -24,20 +29,10 @@ export async function GET() {
       ragConfig: user.ragConfig ?? null,
     },
   })
-}
-
-interface RagConfigBody {
-  chunkSize?: number
-  overlap?: number
-  topK?: number
-  temperature?: number
-}
+})
 
 // PATCH /api/user — 更新昵称 / API Key / RAG 参数
-export async function PATCH(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return Err.unauthorized()
-
+export const PATCH = withAuth(async (req, _ctx, userId) => {
   const body = await req.json()
   const { name, zhipuApiKey, ragConfig } = body as {
     name?: string
@@ -62,24 +57,19 @@ export async function PATCH(req: Request) {
     data.ragConfig = ragConfig
   }
 
-  if (Object.keys(data).length === 0)
-    return Err.invalid('无可更新字段')
+  if (Object.keys(data).length === 0) return Err.invalid('无可更新字段')
 
   const user = await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: userId },
     data,
     select: { id: true, name: true, email: true },
   })
 
   return R.ok({ user })
-}
+})
 
 // DELETE /api/user — 注销账户（删除所有数据）
-export async function DELETE() {
-  const session = await auth()
-  if (!session?.user?.id) return Err.unauthorized()
-
-  await prisma.user.delete({ where: { id: session.user.id } })
-
+export const DELETE = withAuth(async (_req, _ctx, userId) => {
+  await prisma.user.delete({ where: { id: userId } })
   return R.noData()
-}
+})
