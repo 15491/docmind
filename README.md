@@ -86,6 +86,7 @@ pnpm dev
 | `RESEND_API_KEY` | ✅ | - | Resend 邮件 API Key（从 https://resend.com 获取） |
 | `TAVILY_API_KEY` | ⭕ | - | 可选，用于网络搜索；免费额度 1000 次/月 |
 | `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | ⭕ | - | 可选，GitHub OAuth 登录（从 https://github.com/settings/developers 获取） |
+| `AUTH_GITHUB_PROXY_URL` | ⭕ | - | 仅 GitHub OAuth 使用的服务端代理地址，例如 `http://127.0.0.1:7890` |
 
 ---
 
