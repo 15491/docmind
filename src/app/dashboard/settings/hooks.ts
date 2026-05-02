@@ -155,18 +155,35 @@ export function useRagConfig() {
   const [temperature, setTemperature] = useState(0.3)
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(LS_RAG) ?? "{}")
-      if (saved.chunkSize) setChunkSize(saved.chunkSize)
-      if (saved.overlap !== undefined) setOverlap(saved.overlap)
-      if (saved.topK) setTopK(saved.topK)
-      if (saved.temperature !== undefined) setTemperature(saved.temperature)
-    } catch {}
+    http.get<{ user: { ragConfig?: { chunkSize?: number; overlap?: number; topK?: number; temperature?: number } | null } }>("/api/user")
+      .then((data) => {
+        const cfg = data.user?.ragConfig
+        if (cfg) {
+          if (cfg.chunkSize) setChunkSize(cfg.chunkSize)
+          if (cfg.overlap !== undefined) setOverlap(cfg.overlap)
+          if (cfg.topK) setTopK(cfg.topK)
+          if (cfg.temperature !== undefined) setTemperature(cfg.temperature)
+        } else {
+          // 兼容旧版 localStorage 数据
+          try {
+            const saved = JSON.parse(localStorage.getItem(LS_RAG) ?? "{}")
+            if (saved.chunkSize) setChunkSize(saved.chunkSize)
+            if (saved.overlap !== undefined) setOverlap(saved.overlap)
+            if (saved.topK) setTopK(saved.topK)
+            if (saved.temperature !== undefined) setTemperature(saved.temperature)
+          } catch {}
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const handleSave = async () => {
-    localStorage.setItem(LS_RAG, JSON.stringify({ chunkSize, overlap, topK, temperature }))
-    toast.success("检索参数已保存")
+    try {
+      await http.patch("/api/user", { ragConfig: { chunkSize, overlap, topK, temperature } })
+      toast.success("检索参数已保存")
+    } catch (err) {
+      throw new Error(err instanceof ApiError ? err.message : "保存失败")
+    }
   }
 
   return { chunkSize, setChunkSize, overlap, setOverlap, topK, setTopK, temperature, setTemperature, handleSave }

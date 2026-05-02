@@ -136,10 +136,12 @@ export function DeleteDialog({
   doc,
   onConfirm,
   onCancel,
+  deleting = false,
 }: {
   doc: Doc
   onConfirm: () => void
   onCancel: () => void
+  deleting?: boolean
 }) {
   return (
     <Dialog open onOpenChange={onCancel}>
@@ -158,16 +160,18 @@ export function DeleteDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="h-8 px-3 text-[12.5px] font-medium text-[#aaabb2] hover:text-[#62636b] transition-colors"
+            disabled={deleting}
+            className="h-8 px-3 text-[12.5px] font-medium text-[#aaabb2] hover:text-[#62636b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             取消
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 transition-colors"
+            disabled={deleting}
+            className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            确认删除
+            {deleting ? '删除中…' : '确认删除'}
           </button>
         </DialogFooter>
       </DialogContent>

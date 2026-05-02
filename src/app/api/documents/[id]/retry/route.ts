@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { documentQueue } from '@/lib/queue'
 import { deleteDocumentChunks } from '@/lib/elasticsearch'
+import { rateLimit } from '@/lib/rate-limit'
 import { R, Err } from '@/lib/response'
 
 // POST /api/documents/[id]/retry — 重新处理失败文档
@@ -15,6 +16,9 @@ export async function POST(
     if (!session?.user?.id) {
       return Err.unauthorized()
     }
+
+    const { ok } = await rateLimit(`rl:retry:${session.user.id}`, 10, 60)
+    if (!ok) return Err.tooMany('操作过于频繁，请稍后再试')
 
     const { id: documentId } = await params
 

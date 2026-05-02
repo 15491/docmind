@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.2-pg18-trixie
+    container_name: docmind-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: docmind-db
+    volumes:
+      - D:/data-values/docmind/postgres:/var/lib/postgresql
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: docmind-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - D:/data-values/docmind/redis:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: docmind-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - D:/data-values/docmind/minio:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  elasticsearch:
+    image: elasticsearch:9.0.1
+    container_name: docmind-es
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx1g
+    volumes:
+      - D:/data-values/docmind/elasticsearch:/usr/share/elasticsearch/data
+    restart: unless-stopped

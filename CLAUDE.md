@@ -68,6 +68,18 @@ Shared sub-routes reuse from parent: `[sessionId]/page.tsx` imports `useChat` fr
 
 All pages are `"use client"` — no server-side data fetching. Layouts that use hooks (`usePathname`, `use(params)`) are also marked `"use client"`.
 
+### Auth proxy
+
+Route protection lives in `src/proxy.ts` (Next.js 16 renames `middleware` → `proxy` — exports `export const proxy = auth(...)` and `config.matcher`).
+
+### Vector storage
+
+Vectors are stored **only in Elasticsearch** (`docmind-chunks` index, 2048-dim). `DocumentChunk` in PostgreSQL holds text content but **no embedding field** — pgvector is not used.
+
+### RAG configuration
+
+User-level RAG parameters (`chunkSize`, `overlap`, `topK`, `temperature`) are stored in `User.ragConfig` (JSON column). Defaults: 500 / 50 / 5 / 0.7. Worker reads `ragConfig` at processing time for chunk params; chat API uses `topK` and `temperature` per request.
+
 ## Backend services
 
 The app requires these running services (see `.env.example`):
@@ -75,7 +87,7 @@ The app requires these running services (see `.env.example`):
 - **PostgreSQL** — primary database (Prisma ORM)
 - **Redis** — BullMQ job queue + rate limiting
 - **MinIO** — document object storage (S3-compatible)
-- **Elasticsearch** — vector/KNN search (index: `docmind-chunks`, dense_vector 1024-dim)
+- **Elasticsearch** — vector/KNN search (index: `docmind-chunks`, dense_vector **2048-dim**, cosine similarity)
 - **Zhipu AI** — GLM-4-Flash (chat) + embedding-3 (vectors) — _external API, requires API key_
 - **Resend** — transactional email (verification codes, password reset) — _external API, requires API key_
 - **Tavily** — real-time web search (optional) — _external API, free tier 1000/month_

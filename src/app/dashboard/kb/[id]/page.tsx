@@ -2,7 +2,7 @@
 
 import { use, useState, useRef, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, Upload, Trash2, RotateCw, MessageSquare, FileText, Eye } from "lucide-react"
+import { ArrowLeft, Upload, Trash2, RotateCw, MessageSquare, FileText, Eye, Loader2 } from "lucide-react"
 import { DOC_TABLE_HEADERS } from "./constants"
 import { StatusBadge, PreviewPanel, DeleteDialog } from "./components"
 import { useDocList } from "./hooks"
@@ -17,6 +17,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
   const headerCheckboxRef = useRef<HTMLInputElement>(null)
   const {
     docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, onRetry, fileInputRef, handleFileSelect, loading, loadingMore, hasMore, loadMore, error,
+    uploading, deleting,
     selectedIds, toggleSelect, toggleSelectAll, handleBatchDelete, batchDeleting
   } = useDocList(id)
 
@@ -57,23 +58,36 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
         )}
 
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragOver={(e) => { if (!uploading) { e.preventDefault(); setDragging(true) } }}
           onDragLeave={() => setDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setDragging(false); handleFileSelect(e.dataTransfer.files) }}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-[1.5px] border-dashed rounded-[12px] p-10 flex flex-col items-center gap-3 transition-all cursor-pointer ${
-            dragging ? "border-zinc-400 bg-zinc-50" : "border-[#d8d8de] hover:border-zinc-400 hover:bg-zinc-50"
+          onDrop={(e) => { e.preventDefault(); setDragging(false); if (!uploading) handleFileSelect(e.dataTransfer.files) }}
+          onClick={() => { if (!uploading) fileInputRef.current?.click() }}
+          className={`border-[1.5px] border-dashed rounded-[12px] p-10 flex flex-col items-center gap-3 transition-all ${
+            uploading
+              ? "border-zinc-300 bg-zinc-50 cursor-not-allowed opacity-60"
+              : dragging
+                ? "border-zinc-400 bg-zinc-50 cursor-pointer"
+                : "border-[#d8d8de] hover:border-zinc-400 hover:bg-zinc-50 cursor-pointer"
           }`}
         >
           <div className="w-11 h-11 rounded-[10px] bg-zinc-100 flex items-center justify-center">
-            <Upload size={18} strokeWidth={1.8} className="text-zinc-400" />
+            {uploading
+              ? <Loader2 size={18} strokeWidth={1.8} className="text-zinc-400 animate-spin" />
+              : <Upload size={18} strokeWidth={1.8} className="text-zinc-400" />
+            }
           </div>
           <div className="text-center">
-            <p className="text-[13.5px] text-[#62636b]">
-              拖拽文件到此处，或
-              <span className="text-zinc-700 font-medium cursor-pointer hover:text-zinc-900 underline underline-offset-2">点击选择文件</span>
-            </p>
-            <p className="text-[12px] text-[#aaabb2] mt-1">支持 PDF / Markdown / TXT · 最大 50MB</p>
+            {uploading ? (
+              <p className="text-[13.5px] text-[#aaabb2]">上传中，请稍候…</p>
+            ) : (
+              <>
+                <p className="text-[13.5px] text-[#62636b]">
+                  拖拽文件到此处，或
+                  <span className="text-zinc-700 font-medium cursor-pointer hover:text-zinc-900 underline underline-offset-2">点击选择文件</span>
+                </p>
+                <p className="text-[12px] text-[#aaabb2] mt-1">支持 PDF / Markdown / TXT · 最大 50MB</p>
+              </>
+            )}
           </div>
         </div>
 
@@ -221,6 +235,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
           doc={deleteDoc}
           onConfirm={handleDelete}
           onCancel={() => setDeleteDoc(null)}
+          deleting={deleting}
         />
       )}
 

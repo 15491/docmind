@@ -1,6 +1,13 @@
 import { Queue } from 'bullmq'
 import { redis } from '@/lib/redis'
 
+export interface RagConfig {
+  chunkSize?: number
+  overlap?: number
+  topK?: number
+  temperature?: number
+}
+
 export interface DocumentJob {
   documentId: string
   knowledgeBaseId: string
@@ -8,6 +15,7 @@ export interface DocumentJob {
   fileName: string
   mimeType: string
   objectKey: string // MinIO 对象存储路径
+  ragConfig?: RagConfig
 }
 
 // 初始化文档处理队列

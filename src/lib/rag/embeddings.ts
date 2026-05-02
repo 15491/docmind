@@ -7,21 +7,26 @@ export async function embedText(text: string, apiKey?: string | null): Promise<n
     throw new Error('Missing ZHIPU_API_KEY environment variable')
   }
 
+  const requestBody = {
+    model: 'embedding-3',
+    input: text,
+    encoding_format: 'float',
+  }
+  console.log(`[EMBED] Calling Zhipu embed: textLen=${text.length}, trimLen=${text.trim().length}, first80=${JSON.stringify(text.slice(0, 80))}`)
+  console.log(`[EMBED] Request body: ${JSON.stringify(requestBody).slice(0, 300)}`)
+
   const response = await fetch('https://open.bigmodel.cn/api/paas/v4/embeddings', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${key}`,
     },
-    body: JSON.stringify({
-      model: 'embedding-3',
-      input: text,
-      encoding_format: 'float',
-    }),
+    body: JSON.stringify(requestBody),
   })
 
   if (!response.ok) {
     const error = await response.text()
+    console.error(`[EMBED] API error ${response.status}: ${error}`)
     throw new Error(`Zhipu AI Embedding API error: ${response.status} ${error}`)
   }
 

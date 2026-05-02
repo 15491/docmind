@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
+import { toast } from "sonner"
 import { http, ApiError } from "@/lib/request"
 import type { Doc } from "./types"
 
@@ -92,13 +93,12 @@ export function useDocList(kbId: string) {
 
     try {
       setUploading(true)
-      setError(null)
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
 
         if (file.size > maxSize) {
-          setError(`文件 ${file.name} 超过 10MB 限制，已跳过`)
+          toast.error(`${file.name} 超过 50MB 限制，已跳过`)
           continue
         }
 
@@ -109,15 +109,13 @@ export function useDocList(kbId: string) {
         try {
           const data = await http.upload<{ document: Doc }>('/api/upload', formData)
           setDocs((prev) => [data.document, ...prev])
-          startPolling() // 上传成功后确保轮询在运行
+          startPolling()
         } catch (err) {
-          console.error(`Failed to upload ${file.name}:`, err)
+          toast.error(err instanceof ApiError ? err.message : `${file.name} 上传失败`)
         }
       }
-
-      setError(null)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '上传失败')
+      toast.error(err instanceof ApiError ? err.message : '上传失败')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -126,13 +124,13 @@ export function useDocList(kbId: string) {
 
   const onRetry = async (docId: string) => {
     try {
-      setError(null)
       await http.post(`/api/documents/${docId}/retry`)
       setDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: 'processing' } : d))
       stopPolling()
       startPolling()
+      toast.success('已重新提交处理')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '重试失败')
+      toast.error(err instanceof ApiError ? err.message : '重试失败')
     }
   }
 
@@ -140,13 +138,13 @@ export function useDocList(kbId: string) {
     if (!deleteDoc) return
     try {
       setDeleting(true)
-      setError(null)
       await http.del(`/api/documents/${deleteDoc.id}`)
       setDocs((prev) => prev.filter((d) => d.id !== deleteDoc.id))
       if (previewDoc?.id === deleteDoc.id) setPreviewDoc(null)
       setDeleteDoc(null)
+      toast.success('文档已删除')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '删除文档失败')
+      toast.error(err instanceof ApiError ? err.message : '删除文档失败')
     } finally {
       setDeleting(false)
     }
@@ -174,17 +172,18 @@ export function useDocList(kbId: string) {
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return
+    const count = selectedIds.size
     try {
       setBatchDeleting(true)
-      setError(null)
       await http.post('/api/documents/batch-delete', {
         ids: Array.from(selectedIds),
       })
       setDocs((prev) => prev.filter((d) => !selectedIds.has(d.id)))
       if (previewDoc && selectedIds.has(previewDoc.id)) setPreviewDoc(null)
       setSelectedIds(new Set())
+      toast.success(`已删除 ${count} 个文档`)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '批量删除失败')
+      toast.error(err instanceof ApiError ? err.message : '批量删除失败')
     } finally {
       setBatchDeleting(false)
     }

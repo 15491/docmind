@@ -27,9 +27,11 @@ export async function startWorker() {
           }),
           prisma.user.findUnique({
             where: { id: job.data.userId },
-            select: { zhipuApiKey: true },
+            select: { zhipuApiKey: true, ragConfig: true },
           }),
         ])
+
+        const ragConfig = (user?.ragConfig ?? {}) as { chunkSize?: number; overlap?: number }
 
         const result = await processDocument({
           buffer,
@@ -39,6 +41,8 @@ export async function startWorker() {
           knowledgeBaseId: job.data.knowledgeBaseId,
           userId: job.data.userId,
           apiKey: user?.zhipuApiKey,
+          chunkSize: ragConfig.chunkSize,
+          overlap: ragConfig.overlap,
         })
 
         if (!result.success) {

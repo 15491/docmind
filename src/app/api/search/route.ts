@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { embedText } from '@/lib/rag/embeddings'
 import { rateLimit } from '@/lib/rate-limit'
-import { getUserApiKey } from '@/lib/get-api-key'
+import { getUserContext } from '@/lib/get-api-key'
 import { searchChunks } from '@/lib/elasticsearch'
 import { R, Err } from '@/lib/response'
 
@@ -35,15 +35,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json() as SearchRequest
-    const { query, topK: rawTopK = 10 } = body
-    const topK = Math.min(Math.max(Math.floor(rawTopK), 1), 50)
+    const { query, topK: rawTopK } = body
 
     if (!query || query.trim().length === 0) {
       return Err.invalid('搜索关键词不能为空')
     }
 
-    // 获取用户的 API Key
-    const userApiKey = await getUserApiKey(session.user.id)
+    // 一次查询获取 API Key + RAG 配置
+    const { apiKey: userApiKey, ragConfig } = await getUserContext(session.user.id)
+    // 请求方指定的 topK 优先，否则用用户配置，再否则用默认 10
+    const topK = rawTopK !== undefined
+      ? Math.min(Math.max(Math.floor(rawTopK), 1), 50)
+      : Math.min(ragConfig.topK, 50)
 
     // 获取查询的向量表示
     const queryEmbedding = await embedText(query.trim(), userApiKey)

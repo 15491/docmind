@@ -39,7 +39,8 @@ export async function DELETE(
       // 继续执行 PG 删除，不阻断流程
     }
 
-    await prisma.document.delete({ where: { id: documentId } })
+    // deleteMany 不抛 P2025，规避 worker 与删除请求之间的竞争条件
+    await prisma.document.deleteMany({ where: { id: documentId } })
 
     return R.noData()
   } catch (error) {

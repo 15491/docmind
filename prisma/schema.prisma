@@ -24,6 +24,8 @@ model User {
   passwordHash   String?
   /// 用户自定义的智谱 AI API Key，为空时使用服务器环境变量
   zhipuApiKey    String?
+  /// RAG 参数配置 { chunkSize, overlap, topK, temperature }，为空时使用默认值
+  ragConfig      Json?
   /// 关联的 OAuth 账号列表
   accounts       Account[]
   /// 关联的登录会话列表

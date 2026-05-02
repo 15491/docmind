@@ -134,12 +134,12 @@ export function ApiSection() {
           <span className="text-[10px] font-bold text-zinc-500">i</span>
         </div>
         <p className="text-[12px] text-[#62636b] leading-relaxed">
-          API Key 仅保存在本地，不会上传至服务器。前往
+          API Key 加密保存在服务器，仅用于调用智谱 AI 接口。前往
           <a href="https://open.bigmodel.cn" target="_blank" rel="noreferrer"
             className="text-zinc-700 font-semibold underline underline-offset-2 hover:text-zinc-900 mx-1">
             智谱开放平台
           </a>
-          申请密钥。
+          申请密钥。留空则使用服务器默认密钥。
         </p>
       </div>
       <div className="flex justify-end">
