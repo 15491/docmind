@@ -28,7 +28,16 @@
       "Bash(cat)",
       "Read(//tmp/**)",
       "Bash(pnpm add *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(docker compose up *)",
+      "Bash(curl -s http://localhost:9000/minio/health/live)",
+      "Bash(curl -s http://localhost:9200)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('ES OK -', d['version']['number']\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('ES', d['version']['number'], 'OK'\\)\")",
+      "Bash(curl *)",
+      "Bash(docker compose *)",
+      "Bash(docker volume *)",
+      "Bash(git rm *)"
     ]
   }
 }
