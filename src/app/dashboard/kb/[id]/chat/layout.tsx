@@ -7,6 +7,11 @@ import { Plus, BookOpen, Loader, Trash2 } from "lucide-react"
 import { useSessionList } from "./hooks"
 import { useKbInfo } from "../../../hooks"
 import { KbContext } from "./kb-context"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type Props = {
   children: React.ReactNode
@@ -21,20 +26,20 @@ export default function ChatLayout({ children, params }: Props) {
   const { kb } = useKbInfo(id)
   const isNewChat = pathname === `/dashboard/kb/${id}/chat`
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   // 路由变化时刷新会话列表（新建会话后 router.replace 会触发此处）
   useEffect(() => {
     refresh()
   }, [pathname])
 
-  const handleDelete = async (e: React.MouseEvent, sessionId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDeletingId(sessionId)
+  const handleDelete = async () => {
+    if (!confirmId) return
+    setDeletingId(confirmId)
+    setConfirmId(null)
     try {
-      await deleteSession(sessionId)
-      // 若删除的是当前会话，跳到新建对话页
-      if (pathname === `/dashboard/kb/${id}/chat/${sessionId}`) {
+      await deleteSession(confirmId)
+      if (pathname === `/dashboard/kb/${id}/chat/${confirmId}`) {
         router.push(`/dashboard/kb/${id}/chat`)
       }
     } finally {
@@ -43,6 +48,26 @@ export default function ChatLayout({ children, params }: Props) {
   }
 
   return (
+    <>
+    <AlertDialog open={!!confirmId} onOpenChange={(open) => !open && setConfirmId(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除会话</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定删除这条会话吗？会话中的所有消息将被永久删除，无法恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+          >
+            删除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div className="flex h-full overflow-hidden">
       <aside className="w-[224px] flex-shrink-0 border-r border-[#eeeef0] bg-[#f7f7f8] flex flex-col">
         <div className="p-3 border-b border-[#eeeef0] space-y-2.5">
@@ -101,7 +126,7 @@ export default function ChatLayout({ children, params }: Props) {
                       </Link>
                       <button
                         type="button"
-                        onClick={(e) => handleDelete(e, s.id)}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmId(s.id) }}
                         disabled={isDeleting}
                         className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-[6px] flex items-center justify-center transition-all disabled:opacity-40 ${
                           isActive
@@ -136,5 +161,6 @@ export default function ChatLayout({ children, params }: Props) {
         <KbContext.Provider value={kb ?? null}>{children}</KbContext.Provider>
       </div>
     </div>
+    </>
   )
 }
