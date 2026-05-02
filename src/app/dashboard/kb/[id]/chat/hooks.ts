@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { http } from "@/lib/request"
 import type { Message } from "./types"
 
@@ -12,7 +13,6 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
   const [streaming, setStreaming] = useState(false)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // 新建对话时服务端创建的 sessionId，后续消息复用同一会话
   const activeSessionId = useRef<string | undefined>(sessionId)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -33,118 +33,62 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
     const content = (text ?? input).trim()
     if (!content || streaming) return
 
-    try {
-      setError(null)
-      const userMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-      }
-      setMessages((prev) => [...prev, userMessage])
-      setInput("")
-      if (textareaRef.current) textareaRef.current.style.height = "auto"
-      setStreaming(true)
+    setError(null)
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content }])
+    setInput("")
+    if (textareaRef.current) textareaRef.current.style.height = "auto"
+    setStreaming(true)
 
-      // 发起 SSE 请求 — keep as raw fetch (streaming)
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: content, kbId, sessionId: activeSessionId.current }),
-      })
+    const aiId = crypto.randomUUID()
+    let aiContent = ''
+    let sources: Message['sources'] = []
 
-      if (!response.ok) {
-        throw new Error('Failed to get response')
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response body')
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let aiContent = ''
-      const aiId = crypto.randomUUID()
-      let sources: Message['sources'] = []
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        let i = 0
-        while (i < lines.length) {
-          const line = lines[i]
-
-          if (line.startsWith('event: tool_call')) {
+    await fetchEventSource('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: content, kbId, sessionId: activeSessionId.current }),
+      onmessage(ev) {
+        try {
+          if (ev.event === 'tool_call') {
             setSearching(true)
-            i += 2
-          } else if (line.startsWith('event: chunk')) {
+          } else if (ev.event === 'chunk') {
             setSearching(false)
-            const dataLine = lines[i + 1]
-            if (dataLine?.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(dataLine.slice(6)) as { content: string }
-                aiContent += data.content
-                setMessages((prev) => {
-                  const last = prev[prev.length - 1]
-                  if (last?.role === 'assistant' && last.id === aiId) {
-                    return [...prev.slice(0, -1), { ...last, content: aiContent }]
-                  }
-                  return [...prev, { id: aiId, role: 'assistant', content: aiContent, sources }]
-                })
-              } catch {
-                // 忽略 JSON 解析错误
+            const data = JSON.parse(ev.data) as { content: string }
+            aiContent += data.content
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (last?.role === 'assistant' && last.id === aiId) {
+                return [...prev.slice(0, -1), { ...last, content: aiContent }]
               }
+              return [...prev, { id: aiId, role: 'assistant', content: aiContent, sources }]
+            })
+          } else if (ev.event === 'sources') {
+            const data = JSON.parse(ev.data) as { sources: Message['sources'] }
+            sources = data.sources
+          } else if (ev.event === 'error') {
+            const data = JSON.parse(ev.data) as { message: string }
+            setError(data.message)
+          } else if (ev.event === 'done') {
+            const data = JSON.parse(ev.data) as { sessionId?: string }
+            if (data.sessionId && !activeSessionId.current) {
+              activeSessionId.current = data.sessionId
+              router.replace(`/dashboard/kb/${kbId}/chat/${data.sessionId}`)
             }
-            i += 2
-          } else if (line.startsWith('event: sources')) {
-            const dataLine = lines[i + 1]
-            if (dataLine?.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(dataLine.slice(6)) as { sources: Message['sources'] }
-                sources = data.sources
-              } catch {
-                // 忽略 JSON 解析错误
-              }
-            }
-            i += 2
-          } else if (line.startsWith('event: error')) {
-            const dataLine = lines[i + 1]
-            if (dataLine?.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(dataLine.slice(6)) as { message: string }
-                setError(data.message)
-              } catch { /* ignore */ }
-            }
-            i += 2
-          } else if (line.startsWith('event: done')) {
-            const dataLine = lines[i + 1]
-            if (dataLine?.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(dataLine.slice(6)) as { sessionId?: string }
-                if (data.sessionId && !activeSessionId.current) {
-                  // 新建对话：记录 sessionId，并把 URL 替换为会话页，避免刷新后丢失
-                  activeSessionId.current = data.sessionId
-                  router.replace(`/dashboard/kb/${kbId}/chat/${data.sessionId}`)
-                }
-              } catch { /* ignore */ }
-            }
-            i += 2
-          } else {
-            i++
           }
-        }
-      }
-
+        } catch { /* ignore parse errors */ }
+      },
+      onerror(err) {
+        setError(err instanceof Error ? err.message : 'Failed to send message')
+        throw err // 阻止库自动重连
+      },
+      onclose() {
+        setStreaming(false)
+        setSearching(false)
+      },
+    }).catch(() => {
       setStreaming(false)
       setSearching(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message')
-      setStreaming(false)
-      setSearching(false)
-    }
+    })
   }
 
   return { messages, input, setInput, streaming, searching, error, textareaRef, bottomRef, handleSend }
