@@ -1,8 +1,12 @@
 import Link from "next/link"
 import { ArrowRight, Shield } from "lucide-react"
 import { FEATURES, STEPS } from "./constants"
+import { auth } from "@/lib/auth"
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth()
+  const isLoggedIn = !!session?.user?.id
+
   return (
     <div className="h-screen bg-white text-[#0f0f10] flex flex-col overflow-hidden">
       <nav className="flex items-center justify-between px-8 h-14 border-b border-[#ebebed] bg-white shrink-0">
@@ -15,11 +19,11 @@ export default function HomePage() {
           </div>
           <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight">DocMind</span>
         </div>
-        <div className="flex items-center gap-1">
+        {!isLoggedIn && (
           <Link href="/login" className="h-8 px-4 rounded-[8px] text-[13px] font-semibold text-white hover:bg-zinc-700 transition-colors flex items-center" style={{ background: "#18181b", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
             登录
           </Link>
-        </div>
+        )}
       </nav>
 
       <section className="flex flex-col items-center text-center px-6 pt-12 pb-8 shrink-0">
