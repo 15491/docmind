@@ -1,9 +1,9 @@
 "use client"
 
-import { use, useEffect } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Plus, BookOpen, Loader } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Plus, BookOpen, Loader, Trash2 } from "lucide-react"
 import { useSessionList } from "./hooks"
 import { useKbInfo } from "../../../hooks"
 import { KbContext } from "./kb-context"
@@ -16,14 +16,31 @@ type Props = {
 export default function ChatLayout({ children, params }: Props) {
   const { id } = use(params)
   const pathname = usePathname()
-  const { grouped, loading, loadingMore, hasMore, loadMore, refresh } = useSessionList(id)
+  const router = useRouter()
+  const { grouped, loading, loadingMore, hasMore, loadMore, refresh, deleteSession } = useSessionList(id)
   const { kb } = useKbInfo(id)
   const isNewChat = pathname === `/dashboard/kb/${id}/chat`
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // 路由变化时刷新会话列表（新建会话后 router.replace 会触发此处）
   useEffect(() => {
     refresh()
   }, [pathname])
+
+  const handleDelete = async (e: React.MouseEvent, sessionId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDeletingId(sessionId)
+    try {
+      await deleteSession(sessionId)
+      // 若删除的是当前会话，跳到新建对话页
+      if (pathname === `/dashboard/kb/${id}/chat/${sessionId}`) {
+        router.push(`/dashboard/kb/${id}/chat`)
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -64,23 +81,37 @@ export default function ChatLayout({ children, params }: Props) {
                 {sessions.map((s) => {
                   const href = `/dashboard/kb/${id}/chat/${s.id}`
                   const isActive = pathname === href
+                  const isDeleting = deletingId === s.id
                   return (
-                    <Link
-                      key={s.id}
-                      href={href}
-                      className={`block px-2.5 py-2 rounded-[8px] mb-0.5 transition-all border ${
-                        isActive
-                          ? "bg-zinc-900 border-zinc-700 text-white"
-                          : "border-transparent text-[#55555e] hover:bg-[#ededf0]"
-                      }`}
-                    >
-                      <p className={`text-[12.5px] leading-snug truncate ${isActive ? "font-semibold text-white" : "font-medium"}`}>
-                        {s.title}
-                      </p>
-                      <p className="text-[11px] text-[#c0c0c8] mt-0.5">
-                        {s.messageCount ? `${s.messageCount} 条消息` : "新会话"}
-                      </p>
-                    </Link>
+                    <div key={s.id} className="relative group mb-0.5">
+                      <Link
+                        href={href}
+                        className={`block px-2.5 py-2 pr-8 rounded-[8px] transition-all border ${
+                          isActive
+                            ? "bg-zinc-900 border-zinc-700 text-white"
+                            : "border-transparent text-[#55555e] hover:bg-[#ededf0]"
+                        }`}
+                      >
+                        <p className={`text-[12.5px] leading-snug truncate ${isActive ? "font-semibold text-white" : "font-medium"}`}>
+                          {s.title}
+                        </p>
+                        <p className="text-[11px] text-[#c0c0c8] mt-0.5">
+                          {s.messageCount ? `${s.messageCount} 条消息` : "新会话"}
+                        </p>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDelete(e, s.id)}
+                        disabled={isDeleting}
+                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-[6px] flex items-center justify-center transition-all disabled:opacity-40 ${
+                          isActive
+                            ? "opacity-0 group-hover:opacity-100 hover:bg-white/15 text-white/70 hover:text-white"
+                            : "opacity-0 group-hover:opacity-100 hover:bg-zinc-200 text-[#aaabb2] hover:text-red-500"
+                        }`}
+                      >
+                        <Trash2 size={12} strokeWidth={2} />
+                      </button>
+                    </div>
                   )
                 })}
               </div>

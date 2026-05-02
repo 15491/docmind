@@ -228,5 +228,12 @@ export function useSessionList(kbId: string) {
     fetchSessions()
   }, [kbId])
 
-  return { grouped, loading, loadingMore, hasMore: !!nextCursor, loadMore, refresh: fetchSessions }
+  const deleteSession = async (sessionId: string) => {
+    await http.del(`/api/sessions/${sessionId}`)
+    const updated = sessions.filter(s => s.id !== sessionId)
+    setSessions(updated)
+    setGrouped(groupSessionsByDate(updated))
+  }
+
+  return { grouped, loading, loadingMore, hasMore: !!nextCursor, loadMore, refresh: fetchSessions, deleteSession }
 }
