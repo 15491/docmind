@@ -3,8 +3,12 @@ import { redis } from './redis'
 const KEY = (userId: string) => `session:ver:${userId}`
 const TTL = 60 * 60 * 24 * 30 // 30 天，与 NextAuth maxAge 对齐
 
-// 写入新版本号（登录时调用），返回生成的版本号
+// 写入新 sessionId（登录时调用），先踢出旧 session 再存新的，返回新 sessionId
 export async function createSessionVersion(userId: string): Promise<string> {
+  const existing = await redis.get(KEY(userId))
+  if (existing) {
+    await redis.del(KEY(userId))
+  }
   const version = crypto.randomUUID()
   await redis.set(KEY(userId), version, 'EX', TTL)
   return version
