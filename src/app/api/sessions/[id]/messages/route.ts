@@ -31,6 +31,7 @@ export const GET = withAuth(async (_req, ctx, userId) => {
         role: msg.role,
         content: msg.content,
         sources: msg.sources || [],
+        analysis: msg.analysis || null,
         createdAt: msg.createdAt,
       })),
     })

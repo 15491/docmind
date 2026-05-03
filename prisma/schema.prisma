@@ -176,6 +176,8 @@ model Message {
   content   String
   /// 引用来源，格式：[{ documentName, chunkIndex, content }]
   sources   Json?
+  /// 结构化分析：{ evidence, confidence, followUp }
+  analysis  Json?
   /// 所属会话 ID
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)

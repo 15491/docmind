@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { http } from "@/lib/request"
@@ -21,9 +21,9 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
     if (sessionId && messages.length === 0) {
       http.get<{ messages: Message[] }>(`/api/sessions/${sessionId}/messages`)
         .then(data => setMessages(data.messages ?? []))
-        .catch(err => setError(err instanceof Error ? err.message : 'Failed to load messages'))
+        .catch(err => setError(err instanceof Error ? err.message : "加载消息失败"))
     }
-  }, [sessionId])
+  }, [sessionId, messages.length])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -40,46 +40,68 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
     setStreaming(true)
 
     const aiId = crypto.randomUUID()
-    let aiContent = ''
-    let sources: Message['sources'] = []
+    let aiContent = ""
+    let sources: Message["sources"] = []
+    let analysis: Message["analysis"] | undefined
 
-    await fetchEventSource('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    await fetchEventSource("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: content, kbId, sessionId: activeSessionId.current }),
       onmessage(ev) {
         try {
-          if (ev.event === 'tool_call') {
+          if (ev.event === "tool_call") {
             setSearching(true)
-          } else if (ev.event === 'chunk') {
+          } else if (ev.event === "chunk") {
             setSearching(false)
             const data = JSON.parse(ev.data) as { content: string }
             aiContent += data.content
             setMessages((prev) => {
               const last = prev[prev.length - 1]
-              if (last?.role === 'assistant' && last.id === aiId) {
-                return [...prev.slice(0, -1), { ...last, content: aiContent }]
+              if (last?.role === "assistant" && last.id === aiId) {
+                return [...prev.slice(0, -1), { ...last, content: aiContent, analysis }]
               }
-              return [...prev, { id: aiId, role: 'assistant', content: aiContent, sources }]
+              return [...prev, { id: aiId, role: "assistant", content: aiContent, sources, analysis }]
             })
-          } else if (ev.event === 'sources') {
-            const data = JSON.parse(ev.data) as { sources: Message['sources'] }
+          } else if (ev.event === "analysis") {
+            const data = JSON.parse(ev.data) as NonNullable<Message["analysis"]>
+            analysis = data
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (last?.role === "assistant" && last.id === aiId) {
+                return [...prev.slice(0, -1), { ...last, analysis: data }]
+              }
+              return [...prev, { id: aiId, role: "assistant", content: aiContent, sources, analysis: data }]
+            })
+          } else if (ev.event === "sources") {
+            const data = JSON.parse(ev.data) as { sources: Message["sources"] }
             sources = data.sources
-          } else if (ev.event === 'error') {
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (last?.role === "assistant" && last.id === aiId) {
+                return [...prev.slice(0, -1), { ...last, sources: data.sources, analysis }]
+              }
+              return prev
+            })
+          } else if (ev.event === "error") {
             const data = JSON.parse(ev.data) as { message: string }
             setError(data.message)
-          } else if (ev.event === 'done') {
+          } else if (ev.event === "done") {
             const data = JSON.parse(ev.data) as { sessionId?: string }
             if (data.sessionId && !activeSessionId.current) {
               activeSessionId.current = data.sessionId
               router.replace(`/dashboard/kb/${kbId}/chat/${data.sessionId}`)
             }
+            setStreaming(false)
+            setSearching(false)
           }
-        } catch { /* ignore parse errors */ }
+        } catch {
+          // ignore parse errors
+        }
       },
       onerror(err) {
-        setError(err instanceof Error ? err.message : 'Failed to send message')
-        throw err // 阻止库自动重连
+        setError(err instanceof Error ? err.message : "发送消息失败")
+        throw err
       },
       onclose() {
         setStreaming(false)
@@ -114,11 +136,11 @@ function groupSessionsByDate(sessions: Session[]): Record<string, Session[]> {
     const createdDate = new Date(session.createdAt)
     createdDate.setHours(0, 0, 0, 0)
 
-    let group = '更早'
+    let group = "更早"
     if (createdDate.getTime() === today.getTime()) {
-      group = '今天'
+      group = "今天"
     } else if (createdDate.getTime() === yesterday.getTime()) {
-      group = '昨天'
+      group = "昨天"
     }
 
     ;(grouped[group] ??= []).push(session)
@@ -134,7 +156,7 @@ export function useSessionList(kbId: string) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true)
       const data = await http.get<{ sessions: Session[]; nextCursor: string | null }>(
@@ -144,11 +166,11 @@ export function useSessionList(kbId: string) {
       setGrouped(groupSessionsByDate(data.sessions ?? []))
       setNextCursor(data.nextCursor ?? null)
     } catch (err) {
-      console.error('Failed to fetch sessions:', err)
+      console.error("Failed to fetch sessions:", err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [kbId])
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return
@@ -162,15 +184,18 @@ export function useSessionList(kbId: string) {
       setGrouped(groupSessionsByDate(merged))
       setNextCursor(data.nextCursor ?? null)
     } catch (err) {
-      console.error('Failed to load more sessions:', err)
+      console.error("Failed to load more sessions:", err)
     } finally {
       setLoadingMore(false)
     }
   }
 
   useEffect(() => {
-    fetchSessions()
-  }, [kbId])
+    const timer = setTimeout(() => {
+      void fetchSessions()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [fetchSessions])
 
   const deleteSession = async (sessionId: string) => {
     await http.del(`/api/sessions/${sessionId}`)

@@ -46,7 +46,7 @@ export async function embedText(text: string, apiKey?: string | null): Promise<n
   return data.data[0].embedding
 }
 
-interface SearchResult {
+export interface VectorSearchResult {
   id: string
   content: string
   fileName: string
@@ -59,7 +59,7 @@ export async function searchVectors(props: {
   embedding: number[]
   kbId: string
   topK?: number
-}): Promise<SearchResult[]> {
+}): Promise<VectorSearchResult[]> {
   const { embedding, kbId, topK = 5 } = props
 
   const results = await searchEsChunks({

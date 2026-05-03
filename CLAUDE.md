@@ -1,108 +1,97 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件给代码代理提供仓库级工作说明。
 
 @AGENTS.md
 
-## Commands
+## 常用命令
 
 ```bash
-npm run dev      # Start dev server (http://localhost:3000)
-npm run build    # Production build
-npm run lint     # ESLint
-npm run start    # Start production server (run build first)
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm worker
 ```
 
-No test runner is configured yet.
+当前仓库未配置完整测试框架，常规校验以类型检查和 ESLint 为主。
 
-## Stack
+## 技术栈
 
-- **Next.js 16** (App Router) · **React 19** · **TypeScript 5**
-- **Tailwind CSS 4** (PostCSS plugin, not the Vite plugin — config lives in `globals.css` via `@import "tailwindcss"`)
-- **shadcn/ui** components in `src/components/ui/` — add new ones via `npx shadcn add <component>`
-- **React Compiler** is enabled (`reactCompiler: true` in `next.config.ts`) — avoid manual `useMemo`/`useCallback`
-- Path alias: `@/*` → `src/*`
-- Fonts: `Plus_Jakarta_Sans` (sans, body) + `JetBrains_Mono` (mono) loaded via `next/font/google`, exposed as CSS vars `--font-sans` / `--font-mono`
+- Next.js 16（App Router）
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+- shadcn/ui
+- Prisma 7
+- NextAuth v5
+- LangChain
+- Elasticsearch
+- Redis + BullMQ
+- MinIO
 
-## Architecture
+## 项目结构约定
 
-### Route layout hierarchy
+### 页面目录拆分
 
+路由目录通常按下面方式组织：
+
+| 文件 | 作用 |
+| --- | --- |
+| `types.ts` | 类型定义 |
+| `constants.ts` | 常量和静态配置 |
+| `hooks.ts` | 页面逻辑和自定义 Hook |
+| `components.tsx` | 当前路由私有组件 |
+| `page.tsx` | 页面入口 |
+
+### 路由层级
+
+```txt
+src/app/layout.tsx
+src/app/page.tsx
+src/app/dashboard/layout.tsx
+src/app/dashboard/kb/[id]/chat/layout.tsx
+src/app/dashboard/kb/[id]/chat/page.tsx
+src/app/dashboard/kb/[id]/chat/[sessionId]/page.tsx
 ```
-app/layout.tsx              ← html/body, fonts, global metadata
-app/page.tsx                ← landing page (public)
-app/login/                  ← public auth pages
-app/register/
-app/dashboard/layout.tsx    ← adds <IconNav> sidebar, full-height flex
-  app/dashboard/page.tsx
-  app/dashboard/search/
-  app/dashboard/settings/
-  app/dashboard/kb/[id]/
-    app/dashboard/kb/[id]/chat/layout.tsx   ← adds session history sidebar
-      app/dashboard/kb/[id]/chat/page.tsx   ← new chat
-      app/dashboard/kb/[id]/chat/[sessionId]/page.tsx  ← existing session
-```
 
-### File organisation convention (per page/route)
+## 关键实现说明
 
-Every route directory follows the same split:
+### 鉴权
 
-| File | Purpose |
-|------|---------|
-| `types.ts` | TypeScript interfaces/types for this route |
-| `constants.ts` | Mock data, static config, lookup maps |
-| `hooks.ts` | All `useState` / `useEffect` / handlers — exported as custom hooks |
-| `components.tsx` | Sub-components only used within this route |
-| `page.tsx` | Pure JSX — imports from all the above, no logic inline |
+- 统一基于 NextAuth
+- 路由保护位于 `src/proxy.ts`
 
-Shared sub-routes reuse from parent: `[sessionId]/page.tsx` imports `useChat` from `../hooks` and `AIAvatar` from `../components`.
+### 文档处理
 
-### Shared components (`src/components/`)
+- 上传接口写入对象存储
+- Worker 负责解析、切块、向量化、写入索引
 
-- `layout/icon-nav.tsx` — collapsible sidebar nav; auto-collapses below 1100 px viewport width, respects manual user intent via `userCollapsed` state flag
-- `auth/auth-logo.tsx` — logo block used on login/register pages
-- `auth/oauth-buttons.tsx` — GitHub + Google OAuth buttons, accepts `mode: "登录" | "注册"` prop
-- `ui/` — shadcn/ui primitives (do not edit directly)
+### 向量检索
 
-### Client vs Server components
+- 使用 Elasticsearch 做向量检索
+- 向量数据不存 PostgreSQL
 
-All pages are `"use client"` — no server-side data fetching. Layouts that use hooks (`usePathname`, `use(params)`) are also marked `"use client"`.
+### AI 对话
 
-### Auth proxy
+- 聊天入口：`src/app/api/chat/route.ts`
+- LangChain 相关代码：`src/lib/langchain/`
+- SSE 事件包括：
+  - `analysis`
+  - `chunk`
+  - `sources`
+  - `tool_call`
+  - `done`
 
-Route protection lives in `src/proxy.ts` (Next.js 16 renames `middleware` → `proxy` — exports `export const proxy = auth(...)` and `config.matcher`).
+### 会话隔离
 
-### Vector storage
+- 用户边界：`userId`
+- 知识库边界：`knowledgeBaseId`
+- 会话边界：`sessionId`
 
-Vectors are stored **only in Elasticsearch** (`docmind-chunks` index, 2048-dim). `DocumentChunk` in PostgreSQL holds text content but **no embedding field** — pgvector is not used.
+## 开发注意事项
 
-### RAG configuration
-
-User-level RAG parameters (`chunkSize`, `overlap`, `topK`, `temperature`) are stored in `User.ragConfig` (JSON column). Defaults: 500 / 50 / 5 / 0.7. Worker reads `ragConfig` at processing time for chunk params; chat API uses `topK` and `temperature` per request.
-
-## Backend services
-
-The app requires these running services (see `.env.example`):
-
-- **PostgreSQL** — primary database (Prisma ORM)
-- **Redis** — BullMQ job queue + rate limiting
-- **MinIO** — document object storage (S3-compatible)
-- **Elasticsearch** — vector/KNN search (index: `docmind-chunks`, dense_vector **2048-dim**, cosine similarity)
-- **Zhipu AI** — GLM-4-Flash (chat) + embedding-3 (vectors) — _external API, requires API key_
-- **Resend** — transactional email (verification codes, password reset) — _external API, requires API key_
-- **Tavily** — real-time web search (optional) — _external API, free tier 1000/month_
-
-**Startup sequence** (`instrumentation.ts`):
-1. Init MinIO client → auto-create bucket if missing
-2. Init Elasticsearch client → auto-create index (`docmind-chunks`) if missing
-3. Start BullMQ worker in the same process
-
-**Production deployment**:
-- Web server and Worker can run in the same process (default) or separate processes (`pnpm start` + `pnpm worker`)
-- For high throughput, separate Worker process recommended
-- Redis persistence must be enabled for job durability
-- Elasticsearch requires 2GB+ memory; MinIO requires adequate disk space for document storage
-
-Deployment guides:
-- **VPS**: [DEPLOYMENT.md](./DEPLOYMENT.md) — Cloud server setup (Ubuntu, Docker Compose, Nginx, HTTPS)
-- **Laptop**: [DEPLOYMENT_LAPTOP.md](./DEPLOYMENT_LAPTOP.md) — Personal computer setup (Cloudflare Tunnel, 24/7 configuration)
+- 这是 Next.js 16 项目，修改路由和运行时行为前先看官方本地文档
+- 保持现有路由结构与会话隔离逻辑不变
+- 优先做小范围、可验证的修改
+- 涉及 AI 编排时，优先沿用现有 `LangChain` 抽象
