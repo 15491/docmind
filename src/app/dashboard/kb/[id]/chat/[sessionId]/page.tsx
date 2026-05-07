@@ -2,6 +2,7 @@
 
 import { use } from "react"
 import { FileText, Paperclip, Send, Shield } from "lucide-react"
+import { MarkdownContent } from "@/components/ui/markdown-content"
 import { AIAvatar, AnalysisSection } from "../components"
 import { useChat } from "../hooks"
 
@@ -42,7 +43,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)",
                   }}
                 >
-                  <p className="whitespace-pre-line text-[14px] leading-[1.75] text-[#222225]">{msg.content}</p>
+                  <MarkdownContent>{msg.content}</MarkdownContent>
                   <AnalysisSection
                     analysis={msg.analysis}
                     pending={msg.analysisPending}

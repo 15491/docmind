@@ -3,9 +3,9 @@
 import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { BookOpen, ChevronRight, FileSearch, FileText, MessageSquare, Search } from "lucide-react"
-import { ScoreBadge } from "@/app/dashboard/search/components"
-import { useSearch } from "@/app/dashboard/search/hooks"
-import type { SearchResult } from "@/app/dashboard/search/types"
+import { ScoreBadge } from "./components"
+import { useSearch } from "./hooks"
+import type { SearchResult } from "./types"
 
 type SearchWorkspaceProps = {
   variant?: "page" | "dialog"

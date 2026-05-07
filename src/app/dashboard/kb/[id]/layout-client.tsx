@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { useKbInfo } from "../../hooks"
+import { useKbInfo } from "./hooks"
 import { KbPageHeader } from "./header"
 import { KbContext } from "./kb-context"
 
@@ -12,10 +12,10 @@ type KbLayoutClientProps = {
 
 export default function KbLayoutClient({ kbId, children }: KbLayoutClientProps) {
   const pathname = usePathname()
-  const { kb } = useKbInfo(kbId)
+  const { kb, refresh } = useKbInfo(kbId)
 
   return (
-    <KbContext.Provider value={kb ?? null}>
+    <KbContext.Provider value={{ kb: kb ?? null, refreshKb: refresh }}>
       <KbPageHeader
         kbId={kbId}
         kbName={kb?.name ?? "知识库"}

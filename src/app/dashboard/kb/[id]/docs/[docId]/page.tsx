@@ -2,8 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react"
 import { Download, ExternalLink, FileText, Loader2, TriangleAlert } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+import { MarkdownContent } from "@/components/ui/markdown-content"
 import { PageContent } from "@/components/layout/page-content"
 import { ApiError, http } from "@/lib/request"
 import { StatusBadge } from "../../components"
@@ -225,8 +224,8 @@ export default function DocumentPreviewPage({ params }: { params: Promise<{ id: 
             </div>
           ) : isMarkdown && fileState.content ? (
             <div className="h-full overflow-y-auto rounded-[20px] border border-[#ebebed] bg-white shadow-sm">
-              <article className="prose prose-sm mx-auto max-w-4xl px-8 py-8 text-[#222225] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{fileState.content}</ReactMarkdown>
+              <article className="mx-auto max-w-4xl px-8 py-8">
+                <MarkdownContent>{fileState.content}</MarkdownContent>
               </article>
             </div>
           ) : fileState.content ? (

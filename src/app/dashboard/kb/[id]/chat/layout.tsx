@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useSessionList } from "./hooks"
-import { useKb } from "./kb-context"
+import { useKb } from "../kb-context"
 
 type Props = {
   children: React.ReactNode
@@ -27,14 +27,14 @@ export default function ChatLayout({ children, params }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const { grouped, loading, loadingMore, hasMore, loadMore, refresh, deleteSession } = useSessionList(id)
-  const kb = useKb()
+  const { kb } = useKb()
   const isNewChat = pathname === `/dashboard/kb/${id}/chat`
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     refresh()
-  }, [pathname])
+  }, [pathname, refresh])
 
   const handleDelete = async () => {
     if (!confirmId) return

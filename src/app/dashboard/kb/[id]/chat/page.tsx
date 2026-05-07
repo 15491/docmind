@@ -3,18 +3,17 @@
 import { use } from "react"
 import Link from "next/link"
 import { FileText, Globe, Paperclip, Send, Shield, Sparkles, Upload } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+import { MarkdownContent } from "@/components/ui/markdown-content"
 import { AIAvatar, AnalysisSection } from "./components"
 import { SUGGESTIONS } from "./constants"
 import { useChat } from "./hooks"
-import { useKb } from "./kb-context"
+import { useKb } from "../kb-context"
 
 const CONTENT_X_PADDING = "px-8"
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const kb = useKb()
+  const { kb } = useKb()
   const kbName = kb?.name ?? "知识库"
   const docCount = kb?.documentCount ?? 0
   const { messages, input, setInput, streaming, searching, error, textareaRef, bottomRef, handleSend } = useChat(id)
@@ -99,9 +98,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)",
                   }}
                 >
-                  <div className="prose prose-sm max-w-none text-[14px] leading-[1.75] text-[#222225] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_li]:my-0.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_strong]:text-[#0f0f10] [&_ul]:pl-5">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                  </div>
+                  <MarkdownContent>{msg.content}</MarkdownContent>
                   <AnalysisSection
                     analysis={msg.analysis}
                     pending={msg.analysisPending}

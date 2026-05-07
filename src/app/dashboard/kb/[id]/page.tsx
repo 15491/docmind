@@ -8,9 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DeleteDialog, StatusBadge } from "./components"
 import { DOC_TABLE_HEADERS } from "./constants"
 import { useDocList } from "./hooks"
+import { useKb } from "./kb-context"
 
 export default function KBDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { refreshKb } = useKb()
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
   const headerCheckboxRef = useRef<HTMLInputElement>(null)
   const {
@@ -35,7 +37,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
     toggleSelectAll,
     handleBatchDelete,
     batchDeleting,
-  } = useDocList(id)
+  } = useDocList(id, refreshKb)
 
   useEffect(() => {
     if (!headerCheckboxRef.current) return

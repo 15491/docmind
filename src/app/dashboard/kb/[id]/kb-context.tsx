@@ -3,7 +3,14 @@
 import { createContext, useContext } from "react"
 import type { Kb } from "@/app/dashboard/types"
 
-export const KbContext = createContext<Kb | null>(null)
+type KbContextValue = {
+  kb: Kb | null
+  refreshKb: () => void
+}
+
+const defaultValue: KbContextValue = { kb: null, refreshKb: () => {} }
+
+export const KbContext = createContext<KbContextValue>(defaultValue)
 
 export function useKb() {
   return useContext(KbContext)

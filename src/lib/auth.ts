@@ -1,4 +1,5 @@
 import NextAuth, { type DefaultSession, CredentialsSignin } from "next-auth"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { JWT } from "next-auth/jwt"
 import Credentials from "next-auth/providers/credentials"
 

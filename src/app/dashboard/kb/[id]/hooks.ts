@@ -3,9 +3,34 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { ApiError, http } from "@/lib/request"
+import type { Kb } from "@/app/dashboard/types"
 import type { Doc } from "./types"
 
-export function useDocList(kbId: string) {
+export function useKbInfo(kbId: string) {
+  const [kb, setKb] = useState<Kb | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchKb = useCallback(async () => {
+    try {
+      const data = await http.get<{ kb: Kb }>(`/api/kb/${kbId}`)
+      setKb(data.kb)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "获取知识库失败")
+    } finally {
+      setLoading(false)
+    }
+  }, [kbId])
+
+  useEffect(() => {
+    // eslint-disable-next-line
+    void fetchKb()
+  }, [fetchKb])
+
+  return { kb, loading, error, refresh: fetchKb }
+}
+
+export function useDocList(kbId: string, onCountChange?: () => void) {
   const [docs, setDocs] = useState<Doc[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -73,15 +98,16 @@ export function useDocList(kbId: string) {
 
   useEffect(() => {
     let isMounted = true
-    setLoading(true)
 
-    fetchDocs().then((hasProcessing) => {
+    const run = async () => {
+      setLoading(true)
+      const hasProcessing = await fetchDocs()
       if (!isMounted) return
       setLoading(false)
-      if (hasProcessing) {
-        startPolling()
-      }
-    })
+      if (hasProcessing) startPolling()
+    }
+
+    void run()
 
     return () => {
       isMounted = false
@@ -112,6 +138,7 @@ export function useDocList(kbId: string) {
         try {
           const data = await http.upload<{ document: Doc }>("/api/upload", formData)
           setDocs((prev) => [data.document, ...prev])
+          onCountChange?.()
           startPolling()
         } catch (err) {
           toast.error(err instanceof ApiError ? err.message : `${file.name} 上传失败`)
@@ -147,6 +174,7 @@ export function useDocList(kbId: string) {
       await http.del(`/api/documents/${deleteDoc.id}`)
       setDocs((prev) => prev.filter((doc) => doc.id !== deleteDoc.id))
       setDeleteDoc(null)
+      onCountChange?.()
       toast.success("文档已删除")
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "删除文档失败")
@@ -188,6 +216,7 @@ export function useDocList(kbId: string) {
       })
       setDocs((prev) => prev.filter((doc) => !selectedIds.has(doc.id)))
       setSelectedIds(new Set())
+      onCountChange?.()
       toast.success(`已删除 ${count} 个文档`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "批量删除失败")

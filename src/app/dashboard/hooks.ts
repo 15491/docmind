@@ -37,26 +37,51 @@ export function useKbList() {
     return http.get<KbListResponse>(`/api/kb?page=${page}&pageSize=${PAGE_SIZE}`)
   }, [])
 
+  const applyPageData = useCallback((data: KbListResponse) => {
+    setKbs(data.kbs)
+    setTotal(data.total)
+    setCurrentPage(data.page)
+    setTotalPages(data.totalPages)
+  }, [])
+
   const refreshList = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
       const data = await fetchPage(1)
-      setKbs(data.kbs)
-      setTotal(data.total)
-      setCurrentPage(data.page)
-      setTotalPages(data.totalPages)
+      applyPageData(data)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "获取知识库失败")
     } finally {
       setLoading(false)
     }
-  }, [fetchPage])
+  }, [applyPageData, fetchPage])
 
   useEffect(() => {
-    void refreshList()
-  }, [refreshList])
+    let cancelled = false
+
+    const loadInitialPage = async () => {
+      try {
+        const data = await fetchPage(1)
+        if (cancelled) return
+        applyPageData(data)
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof ApiError ? err.message : "获取知识库失败")
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadInitialPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [applyPageData, fetchPage])
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore) return
@@ -182,27 +207,3 @@ export function useKbList() {
   }
 }
 
-export function useKbInfo(kbId: string) {
-  const [kb, setKb] = useState<Kb | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchKb = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await http.get<{ kb: Kb }>(`/api/kb/${kbId}`)
-        setKb(data.kb)
-      } catch (err) {
-        setError(err instanceof ApiError ? err.message : "获取知识库失败")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    void fetchKb()
-  }, [kbId])
-
-  return { kb, loading, error }
-}
