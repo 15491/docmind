@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { BookOpen, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react"
+import { useEffect, useRef } from "react"
+import { BookOpen, Loader2, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -14,9 +15,15 @@ import { Input } from "@/components/ui/input"
 import { useKbList } from "./hooks"
 
 export default function DashboardPage() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
   const {
     kbs,
+    total,
     loading,
+    loadingMore,
+    hasMore,
     error,
     open,
     setOpen,
@@ -33,17 +40,46 @@ export default function DashboardPage() {
     handleEdit,
     confirmEdit,
     cancelEdit,
+    loadMore,
     creating,
     deleting,
     updating,
   } = useKbList()
 
+  useEffect(() => {
+    const target = bottomRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+        if (entry?.isIntersecting) {
+          void loadMore()
+        }
+      },
+      {
+        root: containerRef.current,
+        rootMargin: "200px 0px",
+        threshold: 0,
+      }
+    )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [loadMore])
+
   return (
-    <div className="h-full overflow-y-auto bg-white">
+    <div ref={containerRef} className="h-full overflow-y-auto bg-white">
       <div className="flex items-center justify-between px-8 pt-8 pb-6">
         <div>
-          <h1 className="text-[15px] font-semibold text-[#0f0f10] tracking-tight">我的知识库</h1>
-          <p className="text-[12px] text-[#aaabb2] mt-0.5">共 {kbs.length} 个</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[15px] font-semibold text-[#0f0f10] tracking-tight">我的知识库</h1>
+            {loadingMore ? <span className="text-[11px] text-[#aaabb2]">加载中…</span> : null}
+          </div>
+          <p className="text-[12px] text-[#aaabb2] mt-0.5">共 {total} 个</p>
           {error ? <p className="text-[12px] text-red-500 mt-1">{error}</p> : null}
         </div>
         <button
@@ -132,10 +168,33 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {!loading && kbs.length === 0 ? (
+      {!loading && total === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-3">
           <BookOpen size={28} strokeWidth={1.3} className="text-[#d0d0d8]" />
           <p className="text-[13px] text-[#aaabb2]">还没有知识库，点击“新建知识库”开始</p>
+        </div>
+      ) : null}
+
+      {!loading && total > 0 ? (
+        <div className="px-8 pb-10 flex flex-col items-center gap-3">
+          <div ref={bottomRef} className="h-1 w-full" />
+
+          {loadingMore ? (
+            <div className="h-9 px-4 inline-flex items-center gap-2 rounded-[10px] border border-[#ebebed] text-[12px] text-[#8a8b93] bg-white">
+              <Loader2 size={14} strokeWidth={2} className="animate-spin" />
+              正在加载更多知识库…
+            </div>
+          ) : hasMore ? (
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              className="h-9 px-4 rounded-[10px] border border-[#ebebed] text-[12px] font-medium text-[#62636b] hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+            >
+              加载更多
+            </button>
+          ) : (
+            <p className="text-[12px] text-[#aaabb2]">已经到底了</p>
+          )}
         </div>
       ) : null}
 
@@ -162,7 +221,7 @@ export default function DashboardPage() {
               取消
             </button>
             <button
-              onClick={confirmDelete}
+              onClick={() => void confirmDelete()}
               disabled={deleting}
               className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >

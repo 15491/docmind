@@ -1,12 +1,26 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ApiError, http } from "@/lib/request"
 import type { Kb } from "./types"
 
+const PAGE_SIZE = 12
+
+type KbListResponse = {
+  kbs: Kb[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 export function useKbList() {
   const [kbs, setKbs] = useState<Kb[]>([])
+  const [total, setTotal] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
@@ -17,22 +31,57 @@ export function useKbList() {
   const [deleting, setDeleting] = useState(false)
   const [updating, setUpdating] = useState(false)
 
-  useEffect(() => {
-    const fetchKbs = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await http.get<{ kbs: Kb[] }>("/api/kb")
-        setKbs(data.kbs)
-      } catch (err) {
-        setError(err instanceof ApiError ? err.message : "获取知识库失败")
-      } finally {
-        setLoading(false)
-      }
-    }
+  const hasMore = currentPage < totalPages
 
-    void fetchKbs()
+  const fetchPage = useCallback(async (page: number) => {
+    return http.get<KbListResponse>(`/api/kb?page=${page}&pageSize=${PAGE_SIZE}`)
   }, [])
+
+  const refreshList = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const data = await fetchPage(1)
+      setKbs(data.kbs)
+      setTotal(data.total)
+      setCurrentPage(data.page)
+      setTotalPages(data.totalPages)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "获取知识库失败")
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchPage])
+
+  useEffect(() => {
+    void refreshList()
+  }, [refreshList])
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return
+
+    try {
+      setLoadingMore(true)
+      setError(null)
+
+      const nextPage = currentPage + 1
+      const data = await fetchPage(nextPage)
+
+      setKbs((prev) => {
+        const seen = new Set(prev.map((kb) => kb.id))
+        const appended = data.kbs.filter((kb) => !seen.has(kb.id))
+        return [...prev, ...appended]
+      })
+      setTotal(data.total)
+      setCurrentPage(data.page)
+      setTotalPages(data.totalPages)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "加载更多知识库失败")
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [currentPage, fetchPage, hasMore, loading, loadingMore])
 
   const handleCreate = async () => {
     if (name.trim().length < 2) return
@@ -40,10 +89,10 @@ export function useKbList() {
     try {
       setCreating(true)
       setError(null)
-      const data = await http.post<{ kb: Kb }>("/api/kb", { name: name.trim() })
-      setKbs((prev) => [data.kb, ...prev])
+      await http.post<{ kb: Kb }>("/api/kb", { name: name.trim() })
       setName("")
       setOpen(false)
+      await refreshList()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "创建知识库失败")
     } finally {
@@ -62,8 +111,8 @@ export function useKbList() {
       setDeleting(true)
       setError(null)
       await http.del(`/api/kb/${deleteKb.id}`)
-      setKbs((prev) => prev.filter((kb) => kb.id !== deleteKb.id))
       setDeleteKb(null)
+      await refreshList()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "删除知识库失败")
     } finally {
@@ -105,7 +154,10 @@ export function useKbList() {
 
   return {
     kbs,
+    total,
     loading,
+    loadingMore,
+    hasMore,
     error,
     open,
     setOpen,
@@ -122,6 +174,8 @@ export function useKbList() {
     handleEdit,
     confirmEdit,
     cancelEdit,
+    loadMore,
+    refreshList,
     creating,
     deleting,
     updating,
