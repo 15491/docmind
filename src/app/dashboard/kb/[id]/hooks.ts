@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { http, ApiError } from "@/lib/request"
+import { ApiError, http } from "@/lib/request"
 import type { Doc } from "./types"
 
 export function useDocList(kbId: string) {
@@ -12,7 +12,6 @@ export function useDocList(kbId: string) {
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
-  const [previewDoc, setPreviewDoc] = useState<Doc | null>(null)
   const [deleteDoc, setDeleteDoc] = useState<Doc | null>(null)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -29,15 +28,16 @@ export function useDocList(kbId: string) {
       setDocs(data.documents)
       setNextCursor(data.nextCursor ?? null)
       setError(null)
-      return data.documents.some((d) => d.status === 'processing')
+      return data.documents.some((doc) => doc.status === "processing")
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '获取文档失败')
+      setError(err instanceof ApiError ? err.message : "获取文档失败")
       return false
     }
   }, [kbId])
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return
+
     try {
       setLoadingMore(true)
       const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
@@ -46,27 +46,28 @@ export function useDocList(kbId: string) {
       setDocs((prev) => [...prev, ...data.documents])
       setNextCursor(data.nextCursor ?? null)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '加载更多文档失败')
+      setError(err instanceof ApiError ? err.message : "加载更多文档失败")
     } finally {
       setLoadingMore(false)
     }
-  }, [kbId, nextCursor, loadingMore])
+  }, [kbId, loadingMore, nextCursor])
 
   const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
+    if (!intervalRef.current) return
+    clearInterval(intervalRef.current)
+    intervalRef.current = null
   }, [])
 
-  // 幂等：已在轮询时调用无副作用
   const startPolling = useCallback(() => {
     if (intervalRef.current) return
+
     let pollCount = 0
     intervalRef.current = setInterval(async () => {
-      pollCount++
+      pollCount += 1
       const stillProcessing = await fetchDocs()
-      if (!stillProcessing || pollCount >= 30) stopPolling()
+      if (!stillProcessing || pollCount >= 30) {
+        stopPolling()
+      }
     }, 2000)
   }, [fetchDocs, stopPolling])
 
@@ -77,14 +78,16 @@ export function useDocList(kbId: string) {
     fetchDocs().then((hasProcessing) => {
       if (!isMounted) return
       setLoading(false)
-      if (hasProcessing) startPolling()
+      if (hasProcessing) {
+        startPolling()
+      }
     })
 
     return () => {
       isMounted = false
       stopPolling()
     }
-  }, [kbId, fetchDocs, startPolling, stopPolling])
+  }, [fetchDocs, kbId, startPolling, stopPolling])
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -94,8 +97,8 @@ export function useDocList(kbId: string) {
     try {
       setUploading(true)
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index]
 
         if (file.size > maxSize) {
           toast.error(`${file.name} 超过 50MB 限制，已跳过`)
@@ -103,11 +106,11 @@ export function useDocList(kbId: string) {
         }
 
         const formData = new FormData()
-        formData.append('file', file)
-        formData.append('kbId', kbId)
+        formData.append("file", file)
+        formData.append("kbId", kbId)
 
         try {
-          const data = await http.upload<{ document: Doc }>('/api/upload', formData)
+          const data = await http.upload<{ document: Doc }>("/api/upload", formData)
           setDocs((prev) => [data.document, ...prev])
           startPolling()
         } catch (err) {
@@ -115,36 +118,38 @@ export function useDocList(kbId: string) {
         }
       }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '上传失败')
+      toast.error(err instanceof ApiError ? err.message : "上传失败")
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     }
   }
 
   const onRetry = async (docId: string) => {
     try {
       await http.post(`/api/documents/${docId}/retry`)
-      setDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: 'processing' } : d))
+      setDocs((prev) => prev.map((doc) => doc.id === docId ? { ...doc, status: "processing" } : doc))
       stopPolling()
       startPolling()
-      toast.success('已重新提交处理')
+      toast.success("已重新提交处理")
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '重试失败')
+      toast.error(err instanceof ApiError ? err.message : "重试失败")
     }
   }
 
   const handleDelete = async () => {
     if (!deleteDoc) return
+
     try {
       setDeleting(true)
       await http.del(`/api/documents/${deleteDoc.id}`)
-      setDocs((prev) => prev.filter((d) => d.id !== deleteDoc.id))
-      if (previewDoc?.id === deleteDoc.id) setPreviewDoc(null)
+      setDocs((prev) => prev.filter((doc) => doc.id !== deleteDoc.id))
       setDeleteDoc(null)
-      toast.success('文档已删除')
+      toast.success("文档已删除")
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '删除文档失败')
+      toast.error(err instanceof ApiError ? err.message : "删除文档失败")
     } finally {
       setDeleting(false)
     }
@@ -165,37 +170,53 @@ export function useDocList(kbId: string) {
   const toggleSelectAll = () => {
     if (selectedIds.size > 0) {
       setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(docs.map((d) => d.id)))
+      return
     }
+
+    setSelectedIds(new Set(docs.map((doc) => doc.id)))
   }
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return
+
     const count = selectedIds.size
+
     try {
       setBatchDeleting(true)
-      await http.post('/api/documents/batch-delete', {
+      await http.post("/api/documents/batch-delete", {
         ids: Array.from(selectedIds),
       })
-      setDocs((prev) => prev.filter((d) => !selectedIds.has(d.id)))
-      if (previewDoc && selectedIds.has(previewDoc.id)) setPreviewDoc(null)
+      setDocs((prev) => prev.filter((doc) => !selectedIds.has(doc.id)))
       setSelectedIds(new Set())
       toast.success(`已删除 ${count} 个文档`)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '批量删除失败')
+      toast.error(err instanceof ApiError ? err.message : "批量删除失败")
     } finally {
       setBatchDeleting(false)
     }
   }
 
   return {
-    docs, loading, loadingMore, hasMore: !!nextCursor, loadMore, error,
-    dragging, setDragging,
-    previewDoc, setPreviewDoc,
-    deleteDoc, setDeleteDoc,
-    handleDelete, onRetry, fileInputRef, handleFileSelect,
-    uploading, deleting,
-    selectedIds, toggleSelect, toggleSelectAll, handleBatchDelete, batchDeleting,
+    docs,
+    loading,
+    loadingMore,
+    hasMore: !!nextCursor,
+    loadMore,
+    error,
+    dragging,
+    setDragging,
+    deleteDoc,
+    setDeleteDoc,
+    handleDelete,
+    onRetry,
+    fileInputRef,
+    handleFileSelect,
+    uploading,
+    deleting,
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    handleBatchDelete,
+    batchDeleting,
   }
 }

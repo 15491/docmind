@@ -1,13 +1,13 @@
 "use client"
 
-import { use, useState, useRef, useEffect } from "react"
+import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Upload, Trash2, RotateCw, MessageSquare, FileText, Eye, Loader2 } from "lucide-react"
+import { ArrowLeft, Eye, FileText, Loader2, MessageSquare, RotateCw, Trash2, Upload } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DOC_TABLE_HEADERS } from "./constants"
-import { StatusBadge, PreviewPanel, DeleteDialog } from "./components"
+import { DeleteDialog, StatusBadge } from "./components"
 import { useDocList } from "./hooks"
 import { useKbInfo } from "../../hooks"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 export default function KBDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -16,16 +16,33 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
   const headerCheckboxRef = useRef<HTMLInputElement>(null)
   const {
-    docs, dragging, setDragging, previewDoc, setPreviewDoc, deleteDoc, setDeleteDoc, handleDelete, onRetry, fileInputRef, handleFileSelect, loading, loadingMore, hasMore, loadMore, error,
-    uploading, deleting,
-    selectedIds, toggleSelect, toggleSelectAll, handleBatchDelete, batchDeleting
+    docs,
+    dragging,
+    setDragging,
+    deleteDoc,
+    setDeleteDoc,
+    handleDelete,
+    onRetry,
+    fileInputRef,
+    handleFileSelect,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    error,
+    uploading,
+    deleting,
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    handleBatchDelete,
+    batchDeleting,
   } = useDocList(id)
 
   useEffect(() => {
-    if (headerCheckboxRef.current) {
-      headerCheckboxRef.current.indeterminate = selectedIds.size > 0 && selectedIds.size < docs.length
-    }
-  }, [selectedIds.size, docs.length])
+    if (!headerCheckboxRef.current) return
+    headerCheckboxRef.current.indeterminate = selectedIds.size > 0 && selectedIds.size < docs.length
+  }, [docs.length, selectedIds.size])
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -58,10 +75,24 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
         )}
 
         <div
-          onDragOver={(e) => { if (!uploading) { e.preventDefault(); setDragging(true) } }}
+          onDragOver={(event) => {
+            if (uploading) return
+            event.preventDefault()
+            setDragging(true)
+          }}
           onDragLeave={() => setDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setDragging(false); if (!uploading) handleFileSelect(e.dataTransfer.files) }}
-          onClick={() => { if (!uploading) fileInputRef.current?.click() }}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDragging(false)
+            if (!uploading) {
+              void handleFileSelect(event.dataTransfer.files)
+            }
+          }}
+          onClick={() => {
+            if (!uploading) {
+              fileInputRef.current?.click()
+            }
+          }}
           className={`border-[1.5px] border-dashed rounded-[12px] p-10 flex flex-col items-center gap-3 transition-all ${
             uploading
               ? "border-zinc-300 bg-zinc-50 cursor-not-allowed opacity-60"
@@ -97,8 +128,15 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
           accept=".pdf,.md,.txt"
           multiple
           className="hidden"
-          onChange={(e) => handleFileSelect(e.target.files)}
+          onChange={(event) => void handleFileSelect(event.target.files)}
         />
+
+        {loading && docs.length === 0 ? (
+          <div className="flex items-center justify-center py-16 text-[#aaabb2]">
+            <Loader2 size={16} strokeWidth={2} className="animate-spin mr-2" />
+            <span className="text-[12.5px]">加载文档中…</span>
+          </div>
+        ) : null}
 
         {docs.length > 0 && (
           <div>
@@ -131,82 +169,88 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
                         className="w-4 h-4 cursor-pointer"
                       />
                     </th>
-                    {DOC_TABLE_HEADERS.map((h) => (
-                      <th key={h} className="text-left px-4 py-2.5 text-[11px] font-semibold text-[#aaabb2] uppercase tracking-wider">
-                        {h}
+                    {DOC_TABLE_HEADERS.map((header) => (
+                      <th key={header} className="text-left px-4 py-2.5 text-[11px] font-semibold text-[#aaabb2] uppercase tracking-wider">
+                        {header}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {docs.map((doc, i) => (
-                    <tr
-                      key={doc.id}
-                      className={`group hover:bg-[#fafafa] transition-colors ${
-                        previewDoc?.id === doc.id ? "bg-zinc-50" : ""
-                      } ${i < docs.length - 1 ? "border-b border-[#f5f5f7]" : ""}`}
-                    >
-                      <td className="px-4 py-3 text-center w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(doc.id)}
-                          onChange={() => toggleSelect(doc.id)}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewDoc(doc.status === "ready" || doc.status === "failed" ? doc : null)}
-                          className="flex items-center gap-2.5 text-left hover:text-zinc-900 transition-colors group/name"
-                        >
-                          <FileText size={14} strokeWidth={1.8} className="text-[#c0c0c8] flex-shrink-0" />
-                          <span className="text-[13px] font-medium text-[#35353d] group-hover/name:text-zinc-900 group-hover/name:underline underline-offset-2 transition-colors">
-                            {doc.fileName}
-                          </span>
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{(doc.fileSize / 1024).toFixed(1)}KB</td>
-                      <td className="px-4 py-3"><StatusBadge status={doc.status} /></td>
-                      <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{new Date(doc.createdAt).toLocaleString()}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          {doc.status !== "processing" && (
+                  {docs.map((doc, index) => {
+                    const previewable = doc.status === "ready" || doc.status === "failed"
+                    const previewHref = `/dashboard/kb/${id}/docs/${doc.id}`
+
+                    return (
+                      <tr
+                        key={doc.id}
+                        className={`group hover:bg-[#fafafa] transition-colors ${index < docs.length - 1 ? "border-b border-[#f5f5f7]" : ""}`}
+                      >
+                        <td className="px-4 py-3 text-center w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(doc.id)}
+                            onChange={() => toggleSelect(doc.id)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          {previewable ? (
+                            <Link
+                              href={previewHref}
+                              className="flex items-center gap-2.5 text-left hover:text-zinc-900 transition-colors group/name"
+                            >
+                              <FileText size={14} strokeWidth={1.8} className="text-[#c0c0c8] flex-shrink-0" />
+                              <span className="text-[13px] font-medium text-[#35353d] group-hover/name:text-zinc-900 group-hover/name:underline underline-offset-2 transition-colors">
+                                {doc.fileName}
+                              </span>
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-2.5 text-left">
+                              <FileText size={14} strokeWidth={1.8} className="text-[#c0c0c8] flex-shrink-0" />
+                              <span className="text-[13px] font-medium text-[#35353d]">
+                                {doc.fileName}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{(doc.fileSize / 1024).toFixed(1)}KB</td>
+                        <td className="px-4 py-3"><StatusBadge status={doc.status} /></td>
+                        <td className="px-4 py-3 text-[12.5px] text-[#aaabb2]">{new Date(doc.createdAt).toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            {previewable && (
+                              <Link
+                                href={previewHref}
+                                title="预览"
+                                className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+                              >
+                                <Eye size={13} strokeWidth={1.8} />
+                              </Link>
+                            )}
+                            {doc.status === "failed" && (
+                              <button
+                                type="button"
+                                title="重试"
+                                onClick={() => void onRetry(doc.id)}
+                                className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-amber-50 hover:text-amber-500 transition-colors"
+                              >
+                                <RotateCw size={13} strokeWidth={1.8} />
+                              </button>
+                            )}
                             <button
                               type="button"
-                              title="预览"
-                              onClick={() => setPreviewDoc(previewDoc?.id === doc.id ? null : doc)}
-                              className={`w-[26px] h-[26px] rounded-[6px] flex items-center justify-center transition-colors ${
-                                previewDoc?.id === doc.id
-                                  ? "bg-zinc-900 text-white"
-                                  : "text-[#c0c0c8] hover:bg-zinc-100 hover:text-zinc-600"
-                              }`}
+                              title="删除"
+                              onClick={() => setDeleteDoc(doc)}
+                              className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-red-50 hover:text-red-500 transition-colors"
                             >
-                              <Eye size={13} strokeWidth={1.8} />
+                              <Trash2 size={13} strokeWidth={1.8} />
                             </button>
-                          )}
-                          {doc.status === "failed" && (
-                            <button
-                              type="button"
-                              title="重试"
-                              onClick={() => onRetry(doc.id)}
-                              className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-amber-50 hover:text-amber-500 transition-colors"
-                            >
-                              <RotateCw size={13} strokeWidth={1.8} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            title="删除"
-                            onClick={() => setDeleteDoc(doc)}
-                            className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-red-50 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 size={13} strokeWidth={1.8} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -214,7 +258,7 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
               <div className="mt-3 flex justify-center">
                 <button
                   type="button"
-                  onClick={loadMore}
+                  onClick={() => void loadMore()}
                   disabled={loadingMore}
                   className="h-8 px-4 rounded-[8px] border border-[#ebebed] text-[12px] font-medium text-[#62636b] hover:bg-zinc-50 hover:border-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -226,14 +270,10 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
         )}
       </div>
 
-      {previewDoc && (
-        <PreviewPanel doc={previewDoc} kbName={kbName} onClose={() => setPreviewDoc(null)} />
-      )}
-
       {deleteDoc && (
         <DeleteDialog
           doc={deleteDoc}
-          onConfirm={handleDelete}
+          onConfirm={() => void handleDelete()}
           onCancel={() => setDeleteDoc(null)}
           deleting={deleting}
         />
@@ -249,7 +289,8 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
           </DialogHeader>
           <div className="py-1">
             <p className="text-[13px] text-[#62636b] leading-relaxed">
-              您即将删除 <span className="font-semibold text-[#0f0f10]">{selectedIds.size} 个</span> 文档，此操作将同时清除它们的向量索引。此操作无法撤销。
+              你即将删除 <span className="font-semibold text-[#0f0f10]">{selectedIds.size} 个</span> 文档，
+              这会同时清除它们的向量索引，此操作不可撤销。
             </p>
           </div>
           <DialogFooter>
