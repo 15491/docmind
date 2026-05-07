@@ -43,6 +43,37 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
     let aiContent = ""
     let sources: Message["sources"] = []
     let analysis: Message["analysis"] | undefined
+    let analysisPending = false
+
+    const syncAssistantMessage = (createIfMissing = true) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        const nextMessage: Message = {
+          id: aiId,
+          role: "assistant",
+          content: aiContent,
+          sources,
+          analysis,
+          analysisPending,
+        }
+
+        if (last?.role === "assistant" && last.id === aiId) {
+          return [...prev.slice(0, -1), nextMessage]
+        }
+
+        if (!createIfMissing) {
+          return prev
+        }
+
+        return [...prev, nextMessage]
+      })
+    }
+
+    const clearAnalysisPending = () => {
+      if (!analysisPending) return
+      analysisPending = false
+      syncAssistantMessage(false)
+    }
 
     await fetchEventSource("/api/chat", {
       method: "POST",
@@ -52,37 +83,23 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
         try {
           if (ev.event === "tool_call") {
             setSearching(true)
+          } else if (ev.event === "analysis_pending") {
+            analysisPending = true
+            syncAssistantMessage(false)
           } else if (ev.event === "chunk") {
             setSearching(false)
             const data = JSON.parse(ev.data) as { content: string }
             aiContent += data.content
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (last?.role === "assistant" && last.id === aiId) {
-                return [...prev.slice(0, -1), { ...last, content: aiContent, analysis }]
-              }
-              return [...prev, { id: aiId, role: "assistant", content: aiContent, sources, analysis }]
-            })
+            syncAssistantMessage()
           } else if (ev.event === "analysis") {
             const data = JSON.parse(ev.data) as NonNullable<Message["analysis"]>
             analysis = data
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (last?.role === "assistant" && last.id === aiId) {
-                return [...prev.slice(0, -1), { ...last, analysis: data }]
-              }
-              return [...prev, { id: aiId, role: "assistant", content: aiContent, sources, analysis: data }]
-            })
+            analysisPending = false
+            syncAssistantMessage()
           } else if (ev.event === "sources") {
             const data = JSON.parse(ev.data) as { sources: Message["sources"] }
             sources = data.sources
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (last?.role === "assistant" && last.id === aiId) {
-                return [...prev.slice(0, -1), { ...last, sources: data.sources, analysis }]
-              }
-              return prev
-            })
+            syncAssistantMessage(false)
           } else if (ev.event === "error") {
             const data = JSON.parse(ev.data) as { message: string }
             setError(data.message)
@@ -100,14 +117,17 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
         }
       },
       onerror(err) {
+        clearAnalysisPending()
         setError(err instanceof Error ? err.message : "发送消息失败")
         throw err
       },
       onclose() {
+        clearAnalysisPending()
         setStreaming(false)
         setSearching(false)
       },
     }).catch(() => {
+      clearAnalysisPending()
       setStreaming(false)
       setSearching(false)
     })

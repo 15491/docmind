@@ -173,6 +173,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       ? heuristicRoute(question, qualifiedResults.length > 0)
       : 'kb_only'
 
+    const willGenerateAnalysis = intent === 'document' && qualifiedResults.length > 0
     const systemPrompt = intent === 'conversational' ? CHAT_SYSTEM_PROMPT : DOC_SYSTEM_PROMPT
 
     return new NextResponse(
@@ -255,6 +256,10 @@ export const POST = withAuth(async (req, _ctx, userId) => {
             }
 
             // ③ 真流式输出
+            if (willGenerateAnalysis) {
+              send('analysis_pending', {})
+            }
+
             const answerStream = await streamDocumentAnswer({
               prompt: question,
               context: finalContext,
@@ -288,7 +293,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
             send('done', { sessionId: sessionIdFinal, intent, routeMode })
 
             // ④ 文档模式提取结构化元数据（done 之后，不阻塞交互），同步持久化
-            if (intent === 'document' && fullContent && qualifiedResults.length > 0) {
+            if (willGenerateAnalysis && fullContent) {
               try {
                 const metadata = await extractAnswerMetadata({
                   answer: fullContent,

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { FileText, Send, Shield, Paperclip } from "lucide-react"
 import { useChat } from "../hooks"
 import { useKb } from "../kb-context"
-import { AIAvatar } from "../components"
+import { AIAvatar, AnalysisSection } from "../components"
 
 export default function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = use(params)
@@ -56,41 +56,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string; 
                   style={{ border: "1px solid #ebebed", borderLeft: "2.5px solid #18181b", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)" }}
                 >
                   <p className="text-[14px] leading-[1.75] text-[#222225] whitespace-pre-line">{msg.content}</p>
-                  {msg.analysis && (
-                    <div className="mt-3.5 rounded-[12px] border border-[#f0f0f3] bg-[#fafafa] p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold text-[#62636b]">分析结果</span>
-                        <span className="text-[11px] text-[#8a8b93]">置信度：{msg.analysis.confidence}</span>
-                      </div>
-                      {msg.analysis.evidence.length > 0 && (
-                        <div className="mb-2.5">
-                          <div className="text-[11px] font-semibold text-[#8a8b93] mb-1">关键证据</div>
-                          <ul className="text-[12px] leading-[1.7] text-[#4a4b53] list-disc pl-4 space-y-1">
-                            {msg.analysis.evidence.map((item, index) => (
-                              <li key={index}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {msg.analysis.followUp.length > 0 && (
-                        <div>
-                          <div className="text-[11px] font-semibold text-[#8a8b93] mb-1">建议追问</div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {msg.analysis.followUp.map((item, index) => (
-                              <button
-                                key={index}
-                                type="button"
-                                onClick={() => handleSend(item)}
-                                className="px-2.5 py-1 rounded-full border border-[#e5e7eb] text-[11px] text-[#52525b] hover:bg-white"
-                              >
-                                {item}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <AnalysisSection
+                    analysis={msg.analysis}
+                    pending={msg.analysisPending}
+                    onFollowUp={handleSend}
+                  />
                   {msg.sources && msg.sources.length > 0 && (
                     <div className="mt-3.5 pt-3 border-t border-[#f2f2f5]">
                       <div className="flex items-center gap-1 mb-2 text-[10px] font-bold text-[#c8c8d0] uppercase tracking-wider">

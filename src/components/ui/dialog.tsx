@@ -47,6 +47,21 @@ function DialogOverlay({
   )
 }
 
+function hasDialogDescription(children: React.ReactNode): boolean {
+  return React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement(child)) {
+      return false
+    }
+
+    if (child.type === DialogDescription || child.type === DialogPrimitive.Description) {
+      return true
+    }
+
+    const props = child.props as { children?: React.ReactNode }
+    return hasDialogDescription(props.children)
+  })
+}
+
 function DialogContent({
   className,
   children,
@@ -55,6 +70,9 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const hasDescription = hasDialogDescription(children)
+  const hasExplicitAriaDescription = Object.prototype.hasOwnProperty.call(props, "aria-describedby")
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -67,6 +85,11 @@ function DialogContent({
         {...props}
       >
         {children}
+        {!hasDescription && !hasExplicitAriaDescription && (
+          <DialogPrimitive.Description className="sr-only">
+            Dialog content.
+          </DialogPrimitive.Description>
+        )}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button

@@ -11,4 +11,5 @@ export type Message = {
   content: string
   sources?: Array<{ fileName: string; chunkIndex: number; content?: string }>
   analysis?: MessageAnalysis
+  analysisPending?: boolean
 }

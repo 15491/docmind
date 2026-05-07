@@ -7,7 +7,7 @@ import { DOC_TABLE_HEADERS } from "./constants"
 import { StatusBadge, PreviewPanel, DeleteDialog } from "./components"
 import { useDocList } from "./hooks"
 import { useKbInfo } from "../../hooks"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 export default function KBDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -242,6 +242,9 @@ export default function KBDetailPage({ params }: { params: Promise<{ id: string 
       <Dialog open={showBatchDeleteConfirm} onOpenChange={setShowBatchDeleteConfirm}>
         <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
           <DialogHeader>
+            <DialogDescription className="sr-only">
+              Delete the selected documents and their related index data.
+            </DialogDescription>
             <DialogTitle className="text-[14px] font-semibold text-[#0f0f10]">删除选中文档</DialogTitle>
           </DialogHeader>
           <div className="py-1">

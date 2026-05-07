@@ -5,6 +5,7 @@ import { Plus, BookOpen, Trash2, MessageSquare, Clock } from "lucide-react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -106,6 +107,9 @@ export default function DashboardPage() {
       <Dialog open={!!deleteKb} onOpenChange={(v) => !v && setDeleteKb(null)}>
         <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
           <DialogHeader>
+            <DialogDescription className="sr-only">
+              Delete the selected knowledge base and all related documents.
+            </DialogDescription>
             <DialogTitle className="text-[14px] font-semibold text-[#0f0f10]">删除知识库</DialogTitle>
           </DialogHeader>
           <div className="py-1">
@@ -136,6 +140,9 @@ export default function DashboardPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
           <DialogHeader>
+            <DialogDescription className="sr-only">
+              Create a new knowledge base by entering a name.
+            </DialogDescription>
             <DialogTitle className="text-[14px] font-semibold text-[#0f0f10]">新建知识库</DialogTitle>
           </DialogHeader>
           <div className="py-2">

@@ -5,6 +5,7 @@ import { X, FileText, ChevronRight, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -147,6 +148,9 @@ export function DeleteDialog({
     <Dialog open onOpenChange={onCancel}>
       <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
         <DialogHeader>
+          <DialogDescription className="sr-only">
+            Delete the selected document and its related index data.
+          </DialogDescription>
           <DialogTitle className="text-[14px] font-semibold text-[#0f0f10]">删除文档</DialogTitle>
         </DialogHeader>
         <div className="py-1">
