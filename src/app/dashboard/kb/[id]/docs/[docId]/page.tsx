@@ -1,14 +1,13 @@
 "use client"
 
 import { use, useEffect, useMemo, useState } from "react"
-import Link from "next/link"
-import { ArrowLeft, Download, ExternalLink, FileText, Loader2, TriangleAlert } from "lucide-react"
+import { Download, ExternalLink, FileText, Loader2, TriangleAlert } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { PageContent } from "@/components/layout/page-content"
+import { ApiError, http } from "@/lib/request"
 import { StatusBadge } from "../../components"
 import type { Doc } from "../../types"
-import { useKbInfo } from "../../../../hooks"
-import { ApiError, http } from "@/lib/request"
 
 type PreviewDocument = Doc & {
   knowledgeBaseId: string
@@ -31,8 +30,6 @@ function formatFileSize(fileSize: number) {
 
 export default function DocumentPreviewPage({ params }: { params: Promise<{ id: string; docId: string }> }) {
   const { id, docId } = use(params)
-  const { kb } = useKbInfo(id)
-  const kbName = kb?.name ?? "知识库"
 
   const [doc, setDoc] = useState<PreviewDocument | null>(null)
   const [docLoading, setDocLoading] = useState(true)
@@ -57,7 +54,7 @@ export default function DocumentPreviewPage({ params }: { params: Promise<{ id: 
 
         if (data.document.knowledgeBaseId !== id) {
           setDoc(null)
-          setDocError("该文档不属于当前知识库")
+          setDocError("该文档不属于当前知识库。")
           return
         }
 
@@ -121,136 +118,130 @@ export default function DocumentPreviewPage({ params }: { params: Promise<{ id: 
   }, [doc, isText])
 
   return (
-    <div className="h-full flex flex-col bg-[#f7f7f8] overflow-hidden">
-      <header className="px-8 py-5 border-b border-[#ebebed] bg-white flex-shrink-0">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <Link
-              href={`/dashboard/kb/${id}`}
-              className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#8a8b93] hover:text-[#35353d] transition-colors"
-            >
-              <ArrowLeft size={13} strokeWidth={2} />
-              返回文档列表
-            </Link>
-            <div className="mt-3 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[10px] bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                <FileText size={18} strokeWidth={1.8} className="text-zinc-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[12px] text-[#aaabb2]">{kbName}</p>
-                <h1 className="text-[18px] font-semibold text-[#0f0f10] truncate mt-0.5">
-                  {doc?.fileName ?? "文档预览"}
-                </h1>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[#8a8b93]">
-                  {doc ? (
-                    <>
-                      <span>{formatFileSize(doc.fileSize)}</span>
-                      <span>上传于 {new Date(doc.createdAt).toLocaleString("zh-CN")}</span>
-                      <span>{doc.chunkCount ?? 0} 个分块</span>
-                    </>
-                  ) : (
-                    <span>正在加载文档信息</span>
-                  )}
+    <div className="flex h-full flex-col overflow-hidden bg-[#f7f7f8]">
+      <PageContent className="flex min-h-0 flex-1 flex-col space-y-6">
+        <section className="rounded-[16px] border border-[#ebebed] bg-white px-6 py-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[10px] bg-zinc-100">
+                  <FileText size={18} strokeWidth={1.8} className="text-zinc-500" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="truncate text-[18px] font-semibold text-[#0f0f10]">
+                    {doc?.fileName ?? "文档预览"}
+                  </h1>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[#8a8b93]">
+                    {doc ? (
+                      <>
+                        <span>{formatFileSize(doc.fileSize)}</span>
+                        <span>上传于 {new Date(doc.createdAt).toLocaleString("zh-CN")}</span>
+                        <span>{doc.chunkCount ?? 0} 个分段</span>
+                      </>
+                    ) : (
+                      <span>正在加载文档信息</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {doc ? <StatusBadge status={doc.status} /> : null}
-            {fileState.url ? (
-              <>
-                <a
-                  href={fileState.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-9 px-3.5 rounded-[10px] border border-[#ebebed] bg-white text-[12.5px] font-medium text-[#62636b] hover:border-zinc-300 hover:text-[#0f0f10] transition-colors inline-flex items-center gap-1.5"
-                >
-                  <ExternalLink size={13} strokeWidth={2} />
-                  新窗口打开
-                </a>
-                <a
-                  href={fileState.url}
-                  download={doc?.fileName}
-                  className="h-9 px-3.5 rounded-[10px] bg-zinc-900 text-white text-[12.5px] font-medium hover:bg-zinc-700 transition-colors inline-flex items-center gap-1.5"
-                >
-                  <Download size={13} strokeWidth={2} />
-                  下载
-                </a>
-              </>
-            ) : null}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {doc ? <StatusBadge status={doc.status} /> : null}
+              {fileState.url ? (
+                <>
+                  <a
+                    href={fileState.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#ebebed] bg-white px-3.5 text-[12.5px] font-medium text-[#62636b] transition-colors hover:border-zinc-300 hover:text-[#0f0f10]"
+                  >
+                    <ExternalLink size={13} strokeWidth={2} />
+                    新窗口打开
+                  </a>
+                  <a
+                    href={fileState.url}
+                    download={doc?.fileName}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-zinc-900 px-3.5 text-[12.5px] font-medium text-white transition-colors hover:bg-zinc-700"
+                  >
+                    <Download size={13} strokeWidth={2} />
+                    下载
+                  </a>
+                </>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </header>
+        </section>
 
-      <main className={`flex-1 min-h-0 ${isPdf && fileState.url ? "p-0" : "p-6"}`}>
-        {docLoading ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white flex items-center justify-center text-[#8a8b93]">
-            <Loader2 size={16} strokeWidth={2} className="animate-spin mr-2" />
-            <span className="text-[13px]">加载文档信息中…</span>
-          </div>
-        ) : docError ? (
-          <div className="h-full rounded-[20px] border border-red-200 bg-white flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-              <TriangleAlert size={20} strokeWidth={2} className="text-red-400" />
+        <main className="min-h-0 flex-1">
+          {docLoading ? (
+            <div className="flex h-full items-center justify-center rounded-[20px] border border-[#ebebed] bg-white text-[#8a8b93]">
+              <Loader2 size={16} strokeWidth={2} className="mr-2 animate-spin" />
+              <span className="text-[13px]">加载文档信息中...</span>
             </div>
-            <p className="text-[13px] text-red-500">{docError}</p>
-          </div>
-        ) : !doc ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white flex items-center justify-center text-[#8a8b93]">
-            <span className="text-[13px]">未找到文档</span>
-          </div>
-        ) : doc.status === "processing" ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white flex flex-col items-center justify-center gap-3">
-            <Loader2 size={18} strokeWidth={2} className="animate-spin text-zinc-400" />
-            <p className="text-[13px] text-[#62636b]">文档仍在处理中，暂时无法预览</p>
-            <p className="text-[12px] text-[#aaabb2]">处理完成后刷新页面即可查看</p>
-          </div>
-        ) : doc.status === "failed" ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-              <TriangleAlert size={20} strokeWidth={2} className="text-red-400" />
+          ) : docError ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 rounded-[20px] border border-red-200 bg-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                <TriangleAlert size={20} strokeWidth={2} className="text-red-400" />
+              </div>
+              <p className="text-[13px] text-red-500">{docError}</p>
             </div>
-            <p className="text-[13px] text-[#62636b]">文档解析失败，当前无法预览</p>
-          </div>
-        ) : fileState.loading ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white flex items-center justify-center text-[#8a8b93]">
-            <Loader2 size={16} strokeWidth={2} className="animate-spin mr-2" />
-            <span className="text-[13px]">加载预览内容中…</span>
-          </div>
-        ) : fileState.error ? (
-          <div className="h-full rounded-[20px] border border-red-200 bg-white flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-              <TriangleAlert size={20} strokeWidth={2} className="text-red-400" />
+          ) : !doc ? (
+            <div className="flex h-full items-center justify-center rounded-[20px] border border-[#ebebed] bg-white text-[#8a8b93]">
+              <span className="text-[13px]">未找到文档</span>
             </div>
-            <p className="text-[13px] text-red-500">{fileState.error}</p>
-          </div>
-        ) : isPdf && fileState.url ? (
-          <div className="h-full bg-white overflow-hidden">
-            <iframe
-              src={fileState.url}
-              title={doc.fileName}
-              className="w-full h-full border-0"
-            />
-          </div>
-        ) : isMarkdown && fileState.content ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white shadow-sm overflow-y-auto">
-            <article className="prose prose-sm max-w-4xl mx-auto px-8 py-8 text-[#222225] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{fileState.content}</ReactMarkdown>
-            </article>
-          </div>
-        ) : fileState.content ? (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white shadow-sm overflow-y-auto">
-            <pre className="max-w-4xl mx-auto px-8 py-8 text-[13px] text-[#35353d] leading-[1.9] whitespace-pre-wrap font-sans">
-              {fileState.content}
-            </pre>
-          </div>
-        ) : (
-          <div className="h-full rounded-[20px] border border-[#ebebed] bg-white flex items-center justify-center text-[#8a8b93]">
-            <span className="text-[13px]">暂无可预览内容</span>
-          </div>
-        )}
-      </main>
+          ) : doc.status === "processing" ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 rounded-[20px] border border-[#ebebed] bg-white">
+              <Loader2 size={18} strokeWidth={2} className="animate-spin text-zinc-400" />
+              <p className="text-[13px] text-[#62636b]">文档仍在处理中，暂时无法预览。</p>
+              <p className="text-[12px] text-[#aaabb2]">处理完成后刷新页面即可查看。</p>
+            </div>
+          ) : doc.status === "failed" ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 rounded-[20px] border border-[#ebebed] bg-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                <TriangleAlert size={20} strokeWidth={2} className="text-red-400" />
+              </div>
+              <p className="text-[13px] text-[#62636b]">文档解析失败，当前无法预览。</p>
+            </div>
+          ) : fileState.loading ? (
+            <div className="flex h-full items-center justify-center rounded-[20px] border border-[#ebebed] bg-white text-[#8a8b93]">
+              <Loader2 size={16} strokeWidth={2} className="mr-2 animate-spin" />
+              <span className="text-[13px]">加载预览内容中...</span>
+            </div>
+          ) : fileState.error ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 rounded-[20px] border border-red-200 bg-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                <TriangleAlert size={20} strokeWidth={2} className="text-red-400" />
+              </div>
+              <p className="text-[13px] text-red-500">{fileState.error}</p>
+            </div>
+          ) : isPdf && fileState.url ? (
+            <div className="h-full overflow-hidden rounded-[20px] border border-[#ebebed] bg-white shadow-sm">
+              <iframe
+                src={fileState.url}
+                title={doc.fileName}
+                className="h-full w-full border-0"
+              />
+            </div>
+          ) : isMarkdown && fileState.content ? (
+            <div className="h-full overflow-y-auto rounded-[20px] border border-[#ebebed] bg-white shadow-sm">
+              <article className="prose prose-sm mx-auto max-w-4xl px-8 py-8 text-[#222225] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{fileState.content}</ReactMarkdown>
+              </article>
+            </div>
+          ) : fileState.content ? (
+            <div className="h-full overflow-y-auto rounded-[20px] border border-[#ebebed] bg-white shadow-sm">
+              <pre className="mx-auto max-w-4xl whitespace-pre-wrap px-8 py-8 font-sans text-[13px] leading-[1.9] text-[#35353d]">
+                {fileState.content}
+              </pre>
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-[20px] border border-[#ebebed] bg-white text-[#8a8b93]">
+              <span className="text-[13px]">暂无可预览内容</span>
+            </div>
+          )}
+        </main>
+      </PageContent>
     </div>
   )
 }

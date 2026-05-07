@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { http } from "@/lib/request"
@@ -20,8 +20,8 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
   useEffect(() => {
     if (sessionId && messages.length === 0) {
       http.get<{ messages: Message[] }>(`/api/sessions/${sessionId}/messages`)
-        .then(data => setMessages(data.messages ?? []))
-        .catch(err => setError(err instanceof Error ? err.message : "加载消息失败"))
+        .then((data) => setMessages(data.messages ?? []))
+        .catch((err) => setError(err instanceof Error ? err.message : "加载消息失败"))
     }
   }, [sessionId, messages.length])
 
@@ -219,7 +219,7 @@ export function useSessionList(kbId: string) {
 
   const deleteSession = async (sessionId: string) => {
     await http.del(`/api/sessions/${sessionId}`)
-    const updated = sessions.filter(s => s.id !== sessionId)
+    const updated = sessions.filter((session) => session.id !== sessionId)
     setSessions(updated)
     setGrouped(groupSessionsByDate(updated))
   }

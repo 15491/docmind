@@ -14,6 +14,7 @@ interface SearchRequest {
 
 interface SearchResult {
   id: string
+  docId: string
   docName: string
   kbName: string
   kbId: string
@@ -60,6 +61,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
         if (!doc) return null
         return {
           id: r.id,
+          docId: doc.id,
           docName: r.fileName,
           kbName: doc.knowledgeBase.name,
           kbId: doc.knowledgeBaseId,

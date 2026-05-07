@@ -2,13 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Search, Settings, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
+import { BookOpen, Settings, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
+import { GlobalSearch } from "./global-search"
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: BookOpen, label: "知识库" },
-  { href: "/dashboard/search", icon: Search, label: "搜索" },
 ]
 
 const AUTO_COLLAPSE_WIDTH = 1100
@@ -22,11 +22,12 @@ export function IconNav() {
   const userRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (userRef.current && !userRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userRef.current && !userRef.current.contains(event.target as Node)) {
         setShowLogout(false)
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
@@ -34,13 +35,14 @@ export function IconNav() {
   useEffect(() => {
     const check = () => {
       const narrow = window.innerWidth < AUTO_COLLAPSE_WIDTH
-      // 视口变窄时强制折叠；变宽时只有在用户未手动折叠的情况下才展开
+
       if (narrow) {
         setCollapsed(true)
       } else if (userCollapsed !== true) {
         setCollapsed(false)
       }
     }
+
     check()
     window.addEventListener("resize", check)
     return () => window.removeEventListener("resize", check)
@@ -65,14 +67,13 @@ export function IconNav() {
 
   return (
     <nav
-      className="relative flex-shrink-0 border-r border-[#ebebed] bg-white flex flex-col z-10"
+      className="relative z-10 flex flex-shrink-0 flex-col border-r border-[#ebebed] bg-white"
       style={{
         width: collapsed ? 52 : 220,
         transition: "width 0.2s cubic-bezier(0.4,0,0.2,1)",
         overflow: "visible",
       }}
     >
-      {/* ── 顶部 Logo 区 ── */}
       <div className={`h-[52px] flex items-center flex-shrink-0 border-b border-[#f0f0f3] overflow-hidden ${collapsed ? "justify-center" : "px-3 gap-2"}`}>
         {collapsed ? (
           <>
@@ -82,7 +83,6 @@ export function IconNav() {
             >
               D
             </Link>
-            {/* 悬浮在右边框的展开 handle */}
             <button
               type="button"
               onClick={handleExpand}
@@ -103,7 +103,6 @@ export function IconNav() {
             <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-1 whitespace-nowrap">
               DocMind
             </span>
-            {/* 悬浮在右边框的收起 handle */}
             <button
               type="button"
               onClick={handleCollapse}
@@ -116,7 +115,6 @@ export function IconNav() {
         )}
       </div>
 
-      {/* ── 主导航 ── */}
       <div className="flex-1 flex flex-col py-2 px-2 gap-0.5 overflow-hidden">
         {!collapsed && (
           <p className="px-2 pt-1 pb-1.5 text-[10px] font-bold text-[#c8c8d0] uppercase tracking-[0.08em] whitespace-nowrap">
@@ -126,6 +124,7 @@ export function IconNav() {
 
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const active = isNavActive(href)
+
           return (
             <Link
               key={href}
@@ -153,9 +152,10 @@ export function IconNav() {
             </Link>
           )
         })}
+
+        <GlobalSearch collapsed={collapsed} />
       </div>
 
-      {/* ── 底部：设置 + 用户 ── */}
       <div className="border-t border-[#f0f0f3] py-2 px-2 space-y-0.5">
         {!collapsed && (
           <p className="px-2 pt-0.5 pb-1 text-[10px] font-bold text-[#c8c8d0] uppercase tracking-[0.08em] whitespace-nowrap">
@@ -187,12 +187,11 @@ export function IconNav() {
           </span>
         </Link>
 
-        {/* 用户信息 */}
         <div ref={userRef} className="relative">
           <button
             type="button"
             title={collapsed ? (session?.user?.name ?? "用户") : undefined}
-            onClick={() => setShowLogout((v) => !v)}
+            onClick={() => setShowLogout((visible) => !visible)}
             className={`w-full flex items-center rounded-[8px] h-[34px] cursor-pointer hover:bg-[#f3f3f5] transition-colors whitespace-nowrap overflow-hidden ${
               collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
             }`}
