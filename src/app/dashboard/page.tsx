@@ -1,20 +1,42 @@
 "use client"
 
 import Link from "next/link"
-import { Plus, BookOpen, Trash2, MessageSquare, Clock } from "lucide-react"
+import { BookOpen, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useKbList } from "./hooks"
 
 export default function DashboardPage() {
-  const { kbs, loading, error, open, setOpen, name, setName, handleCreate, handleDelete, deleteKb, setDeleteKb, confirmDelete, creating, deleting } = useKbList()
+  const {
+    kbs,
+    loading,
+    error,
+    open,
+    setOpen,
+    name,
+    setName,
+    handleCreate,
+    handleDelete,
+    deleteKb,
+    setDeleteKb,
+    confirmDelete,
+    editKb,
+    editName,
+    setEditName,
+    handleEdit,
+    confirmEdit,
+    cancelEdit,
+    creating,
+    deleting,
+    updating,
+  } = useKbList()
 
   return (
     <div className="h-full overflow-y-auto bg-white">
@@ -22,7 +44,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-[15px] font-semibold text-[#0f0f10] tracking-tight">我的知识库</h1>
           <p className="text-[12px] text-[#aaabb2] mt-0.5">共 {kbs.length} 个</p>
-          {error && <p className="text-[12px] text-red-500 mt-1">{error}</p>}
+          {error ? <p className="text-[12px] text-red-500 mt-1">{error}</p> : null}
         </div>
         <button
           onClick={() => setOpen(true)}
@@ -42,7 +64,7 @@ export default function DashboardPage() {
             <div className="w-9 h-9 rounded-[8px] flex items-center justify-center mb-4" style={{ background: "#f4f4f5" }}>
               <BookOpen size={16} strokeWidth={1.8} className="text-zinc-500" />
             </div>
-            <h3 className="text-[13.5px] font-semibold text-[#0f0f10] leading-snug mb-1 pr-8 truncate">
+            <h3 className="text-[13.5px] font-semibold text-[#0f0f10] leading-snug mb-1 pr-14 truncate">
               {kb.name}
             </h3>
             <p className="text-[11.5px] text-[#aaabb2]">
@@ -52,14 +74,27 @@ export default function DashboardPage() {
             <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
               <Link
                 href={`/dashboard/kb/${kb.id}/chat`}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
                 className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
                 title="开始问答"
               >
                 <MessageSquare size={13} strokeWidth={1.8} />
               </Link>
               <button
-                onClick={(e) => { e.preventDefault(); handleDelete(kb) }}
+                onClick={(event) => {
+                  event.preventDefault()
+                  handleEdit(kb)
+                }}
+                className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+                title="编辑名称"
+              >
+                <Pencil size={13} strokeWidth={1.8} />
+              </button>
+              <button
+                onClick={(event) => {
+                  event.preventDefault()
+                  handleDelete(kb)
+                }}
                 className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#c0c0c8] hover:bg-red-50 hover:text-red-500 transition-colors"
                 title="删除"
               >
@@ -80,12 +115,12 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {loading && (
+      {loading ? (
         <div className="px-8 pb-8">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
-            {[...Array(3)].map((_, i) => (
+            {[...Array(3)].map((_, index) => (
               <div
-                key={i}
+                key={index}
                 className="bg-white border border-[#ebebed] rounded-[10px] p-5 animate-pulse"
               >
                 <div className="w-9 h-9 rounded-[8px] bg-[#f0f0f3] mb-4" />
@@ -95,16 +130,16 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {!loading && kbs.length === 0 && (
+      {!loading && kbs.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-3">
           <BookOpen size={28} strokeWidth={1.3} className="text-[#d0d0d8]" />
-          <p className="text-[13px] text-[#aaabb2]">还没有知识库，点击「新建知识库」开始</p>
+          <p className="text-[13px] text-[#aaabb2]">还没有知识库，点击“新建知识库”开始</p>
         </div>
-      )}
+      ) : null}
 
-      <Dialog open={!!deleteKb} onOpenChange={(v) => !v && setDeleteKb(null)}>
+      <Dialog open={!!deleteKb} onOpenChange={(visible) => !visible && setDeleteKb(null)}>
         <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
           <DialogHeader>
             <DialogDescription className="sr-only">
@@ -114,9 +149,9 @@ export default function DashboardPage() {
           </DialogHeader>
           <div className="py-1">
             <p className="text-[13px] text-[#62636b] leading-relaxed">
-              确定要删除{" "}
-              <span className="font-semibold text-[#0f0f10]">「{deleteKb?.name}」</span>{" "}
-              吗？该知识库下所有文档和向量索引将同步清除，此操作不可撤销。
+              确定要删除
+              <span className="font-semibold text-[#0f0f10]">「{deleteKb?.name}」</span>
+              吗？该知识库下所有文档和向量索引都会同步清除，此操作不可撤销。
             </p>
           </div>
           <DialogFooter>
@@ -131,7 +166,43 @@ export default function DashboardPage() {
               disabled={deleting}
               className="h-8 px-4 rounded-[8px] bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
-              {deleting ? "删除中..." : "确认删除"}
+              {deleting ? "删除中…" : "确认删除"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editKb} onOpenChange={(visible) => !visible && cancelEdit()}>
+        <DialogContent className="bg-white border-[#ebebed] max-w-sm shadow-xl">
+          <DialogHeader>
+            <DialogDescription className="sr-only">
+              Rename the selected knowledge base.
+            </DialogDescription>
+            <DialogTitle className="text-[14px] font-semibold text-[#0f0f10]">编辑知识库名称</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              placeholder="输入新的知识库名称（至少 2 个字符）"
+              value={editName}
+              onChange={(event) => setEditName(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && void confirmEdit()}
+              className="border-[#e2e2e8] text-[#0f0f10] placeholder:text-[#c8c8d0] text-[13px] h-9 focus-visible:ring-zinc-900/20 focus-visible:border-zinc-700"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <button
+              onClick={cancelEdit}
+              className="h-8 px-3 text-[12.5px] font-medium text-[#aaabb2] hover:text-[#62636b] transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={() => void confirmEdit()}
+              disabled={editName.trim().length < 2 || updating}
+              className="h-8 px-4 rounded-[8px] bg-zinc-900 text-white text-[12.5px] font-semibold hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {updating ? "保存中…" : "保存"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -149,25 +220,28 @@ export default function DashboardPage() {
             <Input
               placeholder="输入知识库名称（至少 2 个字符）"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && void handleCreate()}
               className="border-[#e2e2e8] text-[#0f0f10] placeholder:text-[#c8c8d0] text-[13px] h-9 focus-visible:ring-zinc-900/20 focus-visible:border-zinc-700"
               autoFocus
             />
           </div>
           <DialogFooter>
             <button
-              onClick={() => { setOpen(false); setName("") }}
+              onClick={() => {
+                setOpen(false)
+                setName("")
+              }}
               className="h-8 px-3 text-[12.5px] font-medium text-[#aaabb2] hover:text-[#62636b] transition-colors"
             >
               取消
             </button>
             <button
-              onClick={handleCreate}
+              onClick={() => void handleCreate()}
               disabled={name.trim().length < 2 || creating}
               className="h-8 px-4 rounded-[8px] bg-zinc-900 text-white text-[12.5px] font-semibold hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {creating ? "创建中..." : "创建"}
+              {creating ? "创建中…" : "创建"}
             </button>
           </DialogFooter>
         </DialogContent>
