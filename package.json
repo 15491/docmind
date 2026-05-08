@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test tests/validation.test.ts tests/rate-limit.test.ts tests/api-key-crypto.test.ts tests/document-cleanup.test.ts tests/auth-rate-limit.test.ts tests/queue.test.ts tests/document-job-guard.test.ts",
+    "test": "node --import tsx --test tests/validation.test.ts tests/rate-limit.test.ts tests/api-key-crypto.test.ts tests/document-cleanup.test.ts tests/auth-rate-limit.test.ts tests/queue.test.ts tests/document-job-guard.test.ts tests/document-route-core.test.ts",
     "worker": "tsx src/worker-process.ts"
   },
   "dependencies": {
