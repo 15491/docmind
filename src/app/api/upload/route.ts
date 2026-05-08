@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
-import { prisma } from '@/lib/prisma'
-import { documentQueue, type DocumentJob } from '@/lib/queue'
 import { uploadFile } from '@/lib/minio'
+import { prisma } from '@/lib/prisma'
+import { enqueueDocumentJob, type DocumentJob } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, validateFile, validateRequest } from '@/lib/validate-request'
@@ -46,7 +46,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
     if (existingDoc) {
       if (existingDoc.status === 'ready') return Err.conflict(`文件已上传过，ID: ${existingDoc.id}`)
       if (existingDoc.status === 'failed') return Err.conflict(`文件之前上传失败，请重试该文档：${existingDoc.id}`)
-      if (existingDoc.status === 'uploading') return Err.conflict('文件正在上传中，请稍后')
+      if (existingDoc.status === 'processing') return Err.conflict('文件正在处理中，请稍后')
     }
 
     const document = await prisma.document.create({
@@ -68,8 +68,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       data: { storageKey: objectKey },
     })
 
-    const job = await documentQueue.add(
-      'process-document',
+    const job = await enqueueDocumentJob(
       {
         documentId: document.id,
         knowledgeBaseId: kbId,
@@ -77,8 +76,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
         fileName: file.name,
         mimeType: file.type,
         objectKey,
-      } satisfies DocumentJob,
-      { jobId: `doc-${document.id}` }
+      } satisfies DocumentJob
     )
 
     console.log(`[/api/upload] Document ${document.id} added to queue (job ${job.id})`)

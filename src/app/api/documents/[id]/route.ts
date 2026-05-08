@@ -1,5 +1,9 @@
 import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
+import {
+  cancelDocumentProcessingJobs,
+  clearDocumentCancellationRequests,
+} from '@/lib/queue'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
 import { idParamSchema } from '@/lib/validators'
@@ -51,8 +55,17 @@ export const DELETE = withAuth(async (_req, ctx, userId) => {
     if (!document) return Err.notFound('文档不存在')
     if (document.knowledgeBase.userId !== userId) return Err.forbidden('无权删除该文档')
 
-    await cleanupDocumentArtifacts([{ id: document.id, storageKey: document.storageKey }])
-    await prisma.document.delete({ where: { id: params.id } })
+    const documentIds = [document.id]
+
+    try {
+      await cancelDocumentProcessingJobs(documentIds)
+      await cleanupDocumentArtifacts([{ id: document.id, storageKey: document.storageKey }])
+      await prisma.document.delete({ where: { id: params.id } })
+    } catch (error) {
+      await clearDocumentCancellationRequests(documentIds).catch(() => {})
+      throw error
+    }
+
     return R.noData()
   } catch (error) {
     console.error('[/api/documents/[id]] DELETE Error:', error)

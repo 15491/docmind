@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
+import { limitSendCodeRequest } from '@/lib/auth-rate-limit'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { rateLimit } from '@/lib/rate-limit'
 import { Err, R } from '@/lib/response'
 import { sendVerifyCode, type VerifyPurpose } from '@/lib/verify-code'
 import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (isValidationErrorResponse(body)) return body
 
   const { email, purpose } = body
-  const { ok } = await rateLimit(`rl:send-code:${email}`, 5, 3600)
+  const { ok } = await limitSendCodeRequest(req, email, purpose)
   if (!ok) return Err.tooMany('发送过于频繁，请稍后再试')
 
   if (purpose === 'register') {

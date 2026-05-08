@@ -1,6 +1,9 @@
 import { purgeDocumentDerivedData } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
-import { documentQueue } from '@/lib/queue'
+import {
+  clearDocumentCancellationRequested,
+  enqueueDocumentJob,
+} from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
@@ -31,18 +34,15 @@ export const POST = withAuth(async (_req, ctx, userId) => {
       data: { status: 'processing' },
     })
 
-    await documentQueue.add(
-      'process-document',
-      {
-        documentId: params.id,
-        knowledgeBaseId: document.knowledgeBaseId,
-        userId,
-        fileName: document.fileName,
-        mimeType: document.mimeType,
-        objectKey: document.storageKey,
-      },
-      { jobId: `doc-${params.id}` }
-    )
+    await clearDocumentCancellationRequested(params.id)
+    await enqueueDocumentJob({
+      documentId: params.id,
+      knowledgeBaseId: document.knowledgeBaseId,
+      userId,
+      fileName: document.fileName,
+      mimeType: document.mimeType,
+      objectKey: document.storageKey,
+    })
 
     return R.noData()
   } catch (error) {

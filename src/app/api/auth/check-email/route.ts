@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server'
+import { limitCheckEmailRequest } from '@/lib/auth-rate-limit'
 import { prisma } from '@/lib/prisma'
-import { rateLimit } from '@/lib/rate-limit'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
 import { authCheckEmailSchema } from '@/lib/validators'
 
 export async function POST(req: NextRequest) {
-  const { ok } = await rateLimit(`rl:check-email:${req.headers.get('x-forwarded-for') ?? 'unknown'}`, 20, 60)
+  const { ok } = await limitCheckEmailRequest(req)
   if (!ok) return Err.tooMany('操作过于频繁，请稍后再试')
 
   const body = await parseJsonBody(req, authCheckEmailSchema)

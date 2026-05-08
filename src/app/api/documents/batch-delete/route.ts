@@ -1,5 +1,9 @@
 import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
+import {
+  cancelDocumentProcessingJobs,
+  clearDocumentCancellationRequests,
+} from '@/lib/queue'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
 import { batchDeleteDocumentsSchema } from '@/lib/validators'
@@ -24,12 +28,18 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       }
     }
 
-    await cleanupDocumentArtifacts(documents.map((document) => ({
-      id: document.id,
-      storageKey: document.storageKey,
-    })))
+    try {
+      await cancelDocumentProcessingJobs(ids)
+      await cleanupDocumentArtifacts(documents.map((document) => ({
+        id: document.id,
+        storageKey: document.storageKey,
+      })))
+      await prisma.document.deleteMany({ where: { id: { in: ids } } })
+    } catch (error) {
+      await clearDocumentCancellationRequests(ids).catch(() => {})
+      throw error
+    }
 
-    await prisma.document.deleteMany({ where: { id: { in: ids } } })
     return R.ok({ deleted: ids.length })
   } catch (error) {
     console.error('[/api/documents/batch-delete] Error:', error)

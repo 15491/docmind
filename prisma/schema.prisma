@@ -116,7 +116,7 @@ model Document {
   fileSize        Int
   /// 文件 MIME 类型，如 application/pdf
   mimeType        String
-  /// 处理状态：processing | uploading | ready | failed
+  /// 处理状态：processing | ready | failed
   status          String          @default("processing")
   /// MinIO 对象存储路径
   storageKey      String?

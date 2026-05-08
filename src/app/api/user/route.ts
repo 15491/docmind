@@ -2,6 +2,10 @@ import { encryptUserApiKey, looksLikeMaskedApiKey, maskUserApiKey } from '@/lib/
 import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { resolveStoredUserApiKey } from '@/lib/get-api-key'
 import { prisma } from '@/lib/prisma'
+import {
+  cancelDocumentProcessingJobs,
+  clearDocumentCancellationRequests,
+} from '@/lib/queue'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
 import { updateUserSchema } from '@/lib/validators'
@@ -73,7 +77,16 @@ export const DELETE = withAuth(async (_req, _ctx, userId) => {
     select: { id: true, storageKey: true },
   })
 
-  await cleanupDocumentArtifacts(documents)
+  const documentIds = documents.map((document) => document.id)
+
+  try {
+    await cancelDocumentProcessingJobs(documentIds)
+    await cleanupDocumentArtifacts(documents)
+  } catch (error) {
+    await clearDocumentCancellationRequests(documentIds).catch(() => {})
+    throw error
+  }
+
   await prisma.user.delete({ where: { id: userId } })
   return R.noData()
 })

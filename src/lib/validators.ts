@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-const idSchema = z.string().cuid('无效的ID')
-const emailSchema = z.string().trim().email('邮箱格式不正确')
+const idSchema = z.string().cuid('无效的 ID')
+const emailSchema = z.string().trim().toLowerCase().email('邮箱格式不正确')
 const codeSchema = z.string().trim().min(1, '请输入验证码')
 const passwordSchema = z.string().min(8, '密码至少 8 位')
 
@@ -71,7 +71,11 @@ export const resetPasswordSchema = z.object({
 })
 
 export const createKbSchema = z.object({
-  name: z.string().trim().min(2, '知识库名称至少需要 2 个字符').max(100, '知识库名称不能超过 100 个字符'),
+  name: z
+    .string()
+    .trim()
+    .min(2, '知识库名称至少需要 2 个字符')
+    .max(100, '知识库名称不能超过 100 个字符'),
 })
 
 export const updateKbSchema = createKbSchema

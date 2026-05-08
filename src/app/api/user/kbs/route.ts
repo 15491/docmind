@@ -1,5 +1,9 @@
 import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
+import {
+  cancelDocumentProcessingJobs,
+  clearDocumentCancellationRequests,
+} from '@/lib/queue'
 import { Err, R } from '@/lib/response'
 import { withAuth } from '@/lib/with-auth'
 
@@ -10,8 +14,17 @@ export const DELETE = withAuth(async (_req, _ctx, userId) => {
       select: { id: true, storageKey: true },
     })
 
-    await cleanupDocumentArtifacts(documents)
-    await prisma.knowledgeBase.deleteMany({ where: { userId } })
+    const documentIds = documents.map((document) => document.id)
+
+    try {
+      await cancelDocumentProcessingJobs(documentIds)
+      await cleanupDocumentArtifacts(documents)
+      await prisma.knowledgeBase.deleteMany({ where: { userId } })
+    } catch (error) {
+      await clearDocumentCancellationRequests(documentIds).catch(() => {})
+      throw error
+    }
+
     return R.noData()
   } catch (error) {
     console.error('[/api/user/kbs] DELETE Error:', error)

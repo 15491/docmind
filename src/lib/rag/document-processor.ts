@@ -3,6 +3,10 @@ import { unified, type Plugin } from 'unified'
 import remarkParse from 'remark-parse'
 import stripMarkdown from 'strip-markdown'
 import { chunkText } from './chunk'
+import {
+  getDocumentJobAbortReason,
+  isDocumentJobAbortedError,
+} from '@/lib/document-job-guard'
 import { embedText } from './embeddings'
 import { purgeDocumentDerivedData } from '@/lib/document-cleanup'
 import { indexChunks } from '@/lib/elasticsearch'
@@ -15,6 +19,7 @@ export interface ProcessDocumentProps {
   documentId: string
   knowledgeBaseId: string
   userId: string
+  storageKey?: string | null
   apiKey?: string | null
   chunkSize?: number
   overlap?: number
@@ -24,6 +29,7 @@ export interface ProcessingResult {
   success: boolean
   chunkCount: number
   error?: string
+  aborted?: boolean
 }
 
 type MarkdownNode = {
@@ -158,12 +164,18 @@ export async function processDocument(
     documentId,
     knowledgeBaseId,
     userId,
+    storageKey,
     apiKey,
     chunkSize = 500,
     overlap = 50,
   } = props
 
   try {
+    const initialAbortReason = await getDocumentJobAbortReason(documentId, storageKey ?? undefined)
+    if (initialAbortReason) {
+      throw new Error(initialAbortReason)
+    }
+
     const text = await parseDocument(buffer, mimeType)
     console.log(`[DOC-PROCESSOR] Parsed text length: ${text.length}, trimmed: ${text.trim().length}`)
     console.log(`[DOC-PROCESSOR] Text preview (first 200 chars): ${JSON.stringify(text.slice(0, 200))}`)
@@ -188,6 +200,11 @@ export async function processDocument(
     let successCount = 0
 
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batchAbortReason = await getDocumentJobAbortReason(documentId, storageKey ?? undefined)
+      if (batchAbortReason) {
+        throw new Error(batchAbortReason)
+      }
+
       const batch = chunks.slice(i, i + BATCH_SIZE)
       const results = await Promise.allSettled(
         batch.map(async (chunk, offset) => {
@@ -254,12 +271,25 @@ export async function processDocument(
       chunkCount: successCount,
     }
   } catch (error) {
+    const abortReason = isDocumentJobAbortedError(error)
+      ? error.message
+      : await getDocumentJobAbortReason(documentId, storageKey ?? undefined)
+
     await purgeDocumentDerivedData(documentId).catch((cleanupError) => {
       console.error(
         '[DOC-PROCESSOR] Failed to purge partial chunks:',
         cleanupError instanceof Error ? cleanupError.message : cleanupError
       )
     })
+
+    if (abortReason) {
+      return {
+        success: false,
+        aborted: true,
+        chunkCount: 0,
+        error: abortReason,
+      }
+    }
 
     await prisma.document.update({
       where: { id: documentId },

@@ -19,6 +19,7 @@ const {
   documentsStatusQuerySchema,
   kbListQuerySchema,
   searchSchema,
+  sendCodeSchema,
   updateUserSchema,
 } = validators
 
@@ -95,6 +96,18 @@ test('validateFile 覆盖空文件、类型和大小校验', () => {
 test('searchSchema 统一处理 trim 和 topK 数字预处理', () => {
   const result = searchSchema.parse({ query: '  hello  ', topK: '3' })
   assert.deepEqual(result, { query: 'hello', topK: 3 })
+})
+
+test('sendCodeSchema 会统一邮箱大小写和空白', () => {
+  const result = sendCodeSchema.parse({
+    email: '  USER@Example.COM  ',
+    purpose: 'register',
+  })
+
+  assert.deepEqual(result, {
+    email: 'user@example.com',
+    purpose: 'register',
+  })
 })
 
 test('documentsStatusQuerySchema 解析 limit 并保留 cursor', () => {

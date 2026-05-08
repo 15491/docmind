@@ -1,4 +1,8 @@
 import { Worker } from 'bullmq'
+import {
+  assertDocumentJobCanContinue,
+  isDocumentJobAbortedError,
+} from '@/lib/document-job-guard'
 import { getUserContext } from '@/lib/get-api-key'
 import { downloadFile } from '@/lib/minio'
 import type { DocumentJob } from '@/lib/queue'
@@ -18,6 +22,7 @@ export async function startWorker() {
       try {
         const objectKey = job.data.objectKey
 
+        await assertDocumentJobCanContinue(job.data.documentId, objectKey)
         console.log(`[Worker] Downloading file from MinIO: ${objectKey}`)
 
         const [buffer, user] = await Promise.all([
@@ -27,6 +32,7 @@ export async function startWorker() {
           getUserContext(job.data.userId),
         ])
 
+        await assertDocumentJobCanContinue(job.data.documentId, objectKey)
         const result = await processDocument({
           buffer,
           mimeType: job.data.mimeType,
@@ -34,12 +40,18 @@ export async function startWorker() {
           documentId: job.data.documentId,
           knowledgeBaseId: job.data.knowledgeBaseId,
           userId: job.data.userId,
+          storageKey: objectKey,
           apiKey: user.apiKey,
           chunkSize: user.ragConfig.chunkSize,
           overlap: user.ragConfig.overlap,
         })
 
         if (!result.success) {
+          if (result.aborted) {
+            console.log(`[Worker] Job ${job.id} skipped: ${result.error ?? 'aborted'}`)
+            return result
+          }
+
           throw new Error(result.error || 'Document processing failed')
         }
 
@@ -49,6 +61,11 @@ export async function startWorker() {
 
         return result
       } catch (error) {
+        if (isDocumentJobAbortedError(error)) {
+          console.log(`[Worker] Job ${job.id} skipped: ${error.message}`)
+          return { success: false, aborted: true, chunkCount: 0, error: error.message }
+        }
+
         console.error(
           `[Worker] Job ${job.id} error (attempt ${job.attemptsMade + 1}):`,
           error instanceof Error ? error.message : error
