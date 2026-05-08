@@ -12,77 +12,16 @@ import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request
 import { formatContext, streamDocumentAnswer } from '@/lib/langchain/chains/document-qa'
 import { extractAnswerMetadata } from '@/lib/langchain/chains/structured-answer'
 import { KnowledgeBaseRetriever } from '@/lib/langchain/retrievers/kb-retriever'
-
-interface RetrievedChunk {
-  id: string
-  content: string
-  fileName: string
-  chunkIndex: number
-  similarity: number
-}
-
-// 相似度低于此阈值的检索结果视为无效命中
-const SIMILARITY_THRESHOLD = 0.4
-
-// 实时信息关键词，触发联网搜索
-const REALTIME_KEYWORDS = /最新|今天|现在|最近|当前|实时|今年|本周|本月|刚才|刚刚|几点|什么时候/
-
-// 明确的对话类开头模式
-const CONVERSATIONAL_PATTERNS = [
-  /^(你好|您好|hi|hello|hey)\b/i,
-  /^(谢谢|感谢|多谢|thanks)/i,
-  /^(再见|拜拜|goodbye|bye)/i,
-  /^(我叫|我是|我的名字是|大家好|我想告诉你)/,
-  /^(你是谁|你叫什么|你能做什么|你有什么功能|介绍一下你自己)/,
-  /^(好的|明白|知道了|好|嗯|哦|啊|ok|okay)\s*[。！.!]?\s*$/i,
-]
-
-// 明确需要查文档的关键词
-const DOCUMENT_KEYWORDS = /文档|知识库|资料|文件|报告|方案|条款|章节|内容|说明|规定|政策|手册|合同|协议|数据|统计|分析|总结|描述|提到|提及|写了|说了|记录|根据/
-
-function classifyIntent(question: string): 'conversational' | 'document' {
-  const trimmed = question.trim()
-
-  // 极短消息视为对话
-  if (trimmed.length <= 8) return 'conversational'
-
-  // 含文档关键词 → 文档查询
-  if (DOCUMENT_KEYWORDS.test(trimmed)) return 'document'
-
-  // 匹配对话模式
-  for (const pattern of CONVERSATIONAL_PATTERNS) {
-    if (pattern.test(trimmed)) return 'conversational'
-  }
-
-  // 默认走文档查询（保守兜底，避免漏掉真实查询）
-  return 'document'
-}
-
-function heuristicRoute(question: string, hasQualifiedHits: boolean): 'kb_only' | 'kb_web' {
-  if (!hasQualifiedHits) return 'kb_web'
-  if (REALTIME_KEYWORDS.test(question)) return 'kb_web'
-  return 'kb_only'
-}
-
-function mapSources(searchResults: RetrievedChunk[], webResults: WebResult[]) {
-  return [
-    ...searchResults.map((result) => ({
-      fileName: result.fileName,
-      chunkIndex: result.chunkIndex,
-      content: result.content.slice(0, 200),
-    })),
-    ...webResults.map((result) => ({
-      fileName: result.title,
-      chunkIndex: 0,
-      content: result.content.slice(0, 200),
-      url: result.url,
-    })),
-  ]
-}
-
-const CHAT_SYSTEM_PROMPT = '你是一名友好的智能助手。记住用户在对话中告知的所有个人信息（如姓名、偏好等），并在后续对话中自然地使用。回答简洁、自然。'
-
-const DOC_SYSTEM_PROMPT = '你是一名专业的文档问答助手。优先基于知识库文档回答；文档证据不足时，再结合联网结果补充。回答时引用具体来源，区分"文档结论"和"联网补充"。'
+import {
+  buildChatHistory,
+  CHAT_SYSTEM_PROMPT,
+  classifyChatIntent,
+  DOC_SYSTEM_PROMPT,
+  filterQualifiedChunks,
+  heuristicChatRoute,
+  mapChatSources,
+  type RetrievedChunk,
+} from '@/lib/chat-route-core'
 
 export const POST = withAuth(async (req, _ctx, userId) => {
   try {
@@ -121,22 +60,17 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       select: { role: true, content: true },
     })).reverse()
 
-    const history: HistoryMessage[] = recentMessages.map((message) => ({
+    const historyMessages: HistoryMessage[] = recentMessages.map((message) => ({
       role: message.role as 'user' | 'assistant',
       content: message.content,
     }))
-
-    if (sessionRecord.summary) {
-      history.unshift({ role: 'assistant', content: '好的，我已了解之前的对话内容，请继续。' })
-      history.unshift({ role: 'user', content: `[对话历史摘要]\n${sessionRecord.summary}` })
-    }
+    const history = buildChatHistory(historyMessages, sessionRecord.summary)
 
     await prisma.message.create({
       data: { role: 'user', content: question, sessionId: sessionRecord.id },
     })
 
-    // ① 意图分类：决定是否需要向量检索
-    const intent = classifyIntent(question)
+    const intent = classifyChatIntent(question)
     const sessionIdFinal = sessionRecord.id
 
     let searchResults: RetrievedChunk[] = []
@@ -161,11 +95,9 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       }
     }
 
-    // ② 过滤低相似度结果
-    const qualifiedResults = searchResults.filter((r) => r.similarity >= SIMILARITY_THRESHOLD)
-
+    const qualifiedResults = filterQualifiedChunks(searchResults)
     const routeMode = intent === 'document'
-      ? heuristicRoute(question, qualifiedResults.length > 0)
+      ? heuristicChatRoute(question, qualifiedResults.length > 0)
       : 'kb_only'
 
     const willGenerateAnalysis = intent === 'document' && qualifiedResults.length > 0
@@ -176,6 +108,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
         async start(controller) {
           const enc = new TextEncoder()
           let closed = false
+
           const send = (event: string, data: unknown) => {
             if (closed) return
             try {
@@ -184,10 +117,15 @@ export const POST = withAuth(async (req, _ctx, userId) => {
               closed = true
             }
           }
+
           const close = () => {
             if (closed) return
             closed = true
-            try { controller.close() } catch { /* already closed externally */ }
+            try {
+              controller.close()
+            } catch {
+              // no-op
+            }
           }
 
           try {
@@ -207,9 +145,8 @@ export const POST = withAuth(async (req, _ctx, userId) => {
 
               finalContext = kbContext
 
-              // kb_web：检测是否需要联网，合并上下文
               if (routeMode === 'kb_web') {
-                const gen = streamWithToolDetection({
+                const generator = streamWithToolDetection({
                   prompt: question,
                   systemPrompt,
                   history,
@@ -218,7 +155,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
                 })
 
                 let toolQuery = ''
-                for await (const event of gen) {
+                for await (const event of generator) {
                   if (event.type === 'tool_call') {
                     toolCallDetected = true
                     toolQuery = event.query
@@ -229,8 +166,8 @@ export const POST = withAuth(async (req, _ctx, userId) => {
                 if (toolCallDetected && toolQuery) {
                   try {
                     webResults = await webSearch(toolQuery)
-                  } catch (err) {
-                    console.error('[/api/chat] Web search error:', err)
+                  } catch (error) {
+                    console.error('[/api/chat] Web search error:', error)
                   }
                 }
 
@@ -250,7 +187,6 @@ export const POST = withAuth(async (req, _ctx, userId) => {
               }
             }
 
-            // ③ 真流式输出
             if (willGenerateAnalysis) {
               send('analysis_pending', {})
             }
@@ -264,6 +200,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
               temperature: ragConfig.temperature,
               systemPrompt,
             })
+
             for await (const chunk of answerStream) {
               fullContent += chunk
               send('chunk', { content: chunk })
@@ -277,17 +214,15 @@ export const POST = withAuth(async (req, _ctx, userId) => {
               send('chunk', { content: tip })
             }
 
-            const sources = mapSources(qualifiedResults, webResults)
+            const sources = mapChatSources(qualifiedResults, webResults)
             send('sources', { sources })
 
             const savedMessage = await prisma.message.create({
               data: { role: 'assistant', content: fullContent, sources, sessionId: sessionIdFinal },
             })
 
-            // done 先发：客户端 loading 立即停止，用户可继续交互
             send('done', { sessionId: sessionIdFinal, intent, routeMode })
 
-            // ④ 文档模式提取结构化元数据（done 之后，不阻塞交互），同步持久化
             if (willGenerateAnalysis && fullContent) {
               try {
                 const metadata = await extractAnswerMetadata({
@@ -301,8 +236,8 @@ export const POST = withAuth(async (req, _ctx, userId) => {
                   where: { id: savedMessage.id },
                   data: { analysis: metadata as object },
                 })
-              } catch (err) {
-                console.error('[/api/chat] Metadata extraction failed:', err)
+              } catch (error) {
+                console.error('[/api/chat] Metadata extraction failed:', error)
               }
             }
 
@@ -327,10 +262,10 @@ export const POST = withAuth(async (req, _ctx, userId) => {
                   prisma.chatSession.update({ where: { id: sessionIdFinal }, data: { summary } }),
                   prisma.message.deleteMany({ where: { id: { in: toSummarize.map((message) => message.id) } } }),
                 ])
-              } catch (err) {
-                console.error('[/api/chat] Summarize failed:', err)
+              } catch (error) {
+                console.error('[/api/chat] Summarize failed:', error)
               }
-            }).catch((err) => console.error('[/api/chat] Count failed:', err))
+            }).catch((error) => console.error('[/api/chat] Count failed:', error))
           } catch (error) {
             console.error('[/api/chat] Stream error:', error)
             send('error', { message: '生成失败，请重试' })
