@@ -1,5 +1,5 @@
+import { purgeDocumentDerivedData } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
-import { deleteDocumentChunks } from '@/lib/elasticsearch'
 import { documentQueue } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
 import { Err, R } from '@/lib/response'
@@ -25,11 +25,7 @@ export const POST = withAuth(async (_req, ctx, userId) => {
     if (document.status !== 'failed') return Err.invalid('只有处理失败的文档才能重试')
     if (!document.storageKey) return Err.invalid('文档存储路径丢失，无法重试，请重新上传')
 
-    await deleteDocumentChunks(params.id).catch((error) => {
-      console.error('[retry] Failed to delete old chunks:', error)
-    })
-
-    await prisma.documentChunk.deleteMany({ where: { documentId: params.id } })
+    await purgeDocumentDerivedData(params.id)
     await prisma.document.update({
       where: { id: params.id },
       data: { status: 'processing' },

@@ -1,14 +1,13 @@
 import { Worker } from 'bullmq'
-import { redis } from '@/lib/redis'
-import { prisma } from '@/lib/prisma'
-import { processDocument } from '@/lib/rag/document-processor'
-import type { DocumentJob } from '@/lib/queue'
+import { getUserContext } from '@/lib/get-api-key'
 import { downloadFile } from '@/lib/minio'
+import type { DocumentJob } from '@/lib/queue'
+import { redis } from '@/lib/redis'
+import { processDocument } from '@/lib/rag/document-processor'
 
 let worker: Worker<DocumentJob> | null = null
 
 export async function startWorker() {
-  // 避免重复启动
   if (worker) return
 
   worker = new Worker<DocumentJob>(
@@ -25,13 +24,8 @@ export async function startWorker() {
           downloadFile(objectKey).catch((err) => {
             throw new Error(`Failed to download file from MinIO: ${err instanceof Error ? err.message : String(err)}`)
           }),
-          prisma.user.findUnique({
-            where: { id: job.data.userId },
-            select: { zhipuApiKey: true, ragConfig: true },
-          }),
+          getUserContext(job.data.userId),
         ])
-
-        const ragConfig = (user?.ragConfig ?? {}) as { chunkSize?: number; overlap?: number }
 
         const result = await processDocument({
           buffer,
@@ -40,9 +34,9 @@ export async function startWorker() {
           documentId: job.data.documentId,
           knowledgeBaseId: job.data.knowledgeBaseId,
           userId: job.data.userId,
-          apiKey: user?.zhipuApiKey,
-          chunkSize: ragConfig.chunkSize,
-          overlap: ragConfig.overlap,
+          apiKey: user.apiKey,
+          chunkSize: user.ragConfig.chunkSize,
+          overlap: user.ragConfig.overlap,
         })
 
         if (!result.success) {

@@ -99,6 +99,7 @@ cp .env.example .env.local
 - `MINIO_*`
 - `ELASTICSEARCH_HOST`
 - `AUTH_SECRET`
+- `USER_API_KEY_ENCRYPTION_KEY`（推荐，未设置时回退到 `AUTH_SECRET`）
 - `ZHIPU_API_KEY`
 - `RESEND_API_KEY`
 - `EMAIL_FROM`

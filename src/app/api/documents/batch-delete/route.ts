@@ -1,5 +1,5 @@
+import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
-import { deleteDocumentChunks } from '@/lib/elasticsearch'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
 import { batchDeleteDocumentsSchema } from '@/lib/validators'
@@ -13,7 +13,7 @@ export const POST = withAuth(async (req, _ctx, userId) => {
     const { ids } = body
     const documents = await prisma.document.findMany({
       where: { id: { in: ids } },
-      select: { id: true, knowledgeBase: { select: { userId: true } } },
+      select: { id: true, storageKey: true, knowledgeBase: { select: { userId: true } } },
     })
 
     if (documents.length !== ids.length) return Err.notFound('部分文档不存在')
@@ -24,13 +24,10 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       }
     }
 
-    for (const id of ids) {
-      try {
-        await deleteDocumentChunks(id)
-      } catch (error) {
-        console.error(`[batch-delete] ES cleanup failed for doc ${id}:`, error)
-      }
-    }
+    await cleanupDocumentArtifacts(documents.map((document) => ({
+      id: document.id,
+      storageKey: document.storageKey,
+    })))
 
     await prisma.document.deleteMany({ where: { id: { in: ids } } })
     return R.ok({ deleted: ids.length })

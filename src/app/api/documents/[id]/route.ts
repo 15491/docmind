@@ -1,5 +1,5 @@
+import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
-import { deleteDocumentChunks } from '@/lib/elasticsearch'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
 import { idParamSchema } from '@/lib/validators'
@@ -45,19 +45,14 @@ export const DELETE = withAuth(async (_req, ctx, userId) => {
 
     const document = await prisma.document.findUnique({
       where: { id: params.id },
-      select: { id: true, knowledgeBase: { select: { userId: true } } },
+      select: { id: true, storageKey: true, knowledgeBase: { select: { userId: true } } },
     })
 
     if (!document) return Err.notFound('文档不存在')
     if (document.knowledgeBase.userId !== userId) return Err.forbidden('无权删除该文档')
 
-    try {
-      await deleteDocumentChunks(params.id)
-    } catch (error) {
-      console.error('[DELETE document] ES cleanup failed:', error)
-    }
-
-    await prisma.document.deleteMany({ where: { id: params.id } })
+    await cleanupDocumentArtifacts([{ id: document.id, storageKey: document.storageKey }])
+    await prisma.document.delete({ where: { id: params.id } })
     return R.noData()
   } catch (error) {
     console.error('[/api/documents/[id]] DELETE Error:', error)

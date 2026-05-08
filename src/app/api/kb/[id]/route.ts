@@ -1,3 +1,4 @@
+import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
 import { Err, R } from '@/lib/response'
 import {
@@ -81,6 +82,12 @@ export const DELETE = withAuth(async (_req, ctx, userId) => {
     if (!kb) return Err.notFound('知识库不存在')
     if (kb.userId !== userId) return Err.forbidden('无权删除此知识库')
 
+    const documents = await prisma.document.findMany({
+      where: { knowledgeBaseId: params.id },
+      select: { id: true, storageKey: true },
+    })
+
+    await cleanupDocumentArtifacts(documents)
     await prisma.knowledgeBase.delete({ where: { id: params.id } })
     return R.noData()
   } catch (error) {

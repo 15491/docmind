@@ -4,8 +4,9 @@ import remarkParse from 'remark-parse'
 import stripMarkdown from 'strip-markdown'
 import { chunkText } from './chunk'
 import { embedText } from './embeddings'
-import { prisma } from '@/lib/prisma'
+import { purgeDocumentDerivedData } from '@/lib/document-cleanup'
 import { indexChunks } from '@/lib/elasticsearch'
+import { prisma } from '@/lib/prisma'
 
 export interface ProcessDocumentProps {
   buffer: Buffer
@@ -54,43 +55,41 @@ function markdownTreeToText(node: MarkdownNode): string {
   return node.type === 'paragraph' ? `${content}\n\n` : content
 }
 
-// 用 pdfjs-dist 解析 PDF，比 pdf-parse 更好地支持 CJK CID 字体
 async function parsePdf(buffer: Buffer): Promise<string> {
+  const { readFile } = await import('fs/promises')
   const { join } = await import('path')
   const { pathToFileURL } = await import('url')
-  const { readFile } = await import('fs/promises')
 
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs') as typeof import('pdfjs-dist/types/src/pdf')
 
-  // pdfjs-dist v5 在 Node.js 下必须指定真实 worker 文件
   const workerPath = join(process.cwd(), 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs')
   pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href
 
-  // pdfjs-dist v5 的 NodeBinaryDataFactory 把 cMapUrl 拼成 file:// 字符串后直接交给
-  // fs.readFile —— 但 fs.readFile 只接受 URL 对象，不接受 file:// 字符串，必然 ENOENT。
-  // 解决方案：传入自定义 BinaryDataFactory，用文件系统路径直接读 .bcmap / 字体文件。
   const cmapsDir = join(process.cwd(), 'node_modules', 'pdfjs-dist', 'cmaps')
   const fontsDir = join(process.cwd(), 'node_modules', 'pdfjs-dist', 'standard_fonts')
-  // pdfjs 会校验 url 必须以 "/" 结尾，所以这里用一个标记字符串当占位 baseUrl，
-  // 真正的解析在自定义 _fetch 里按 kind 决定从哪个目录读。
+
   const CustomBinaryDataFactory = class {
     cMapUrl: string
     standardFontDataUrl: string
     wasmUrl: string | null
+
     constructor(opts: { cMapUrl?: string; standardFontDataUrl?: string; wasmUrl?: string }) {
       this.cMapUrl = opts.cMapUrl ?? 'cmap:/'
       this.standardFontDataUrl = opts.standardFontDataUrl ?? 'font:/'
       this.wasmUrl = opts.wasmUrl ?? null
     }
+
     async fetch({ kind, filename }: { kind: string; filename: string }): Promise<Uint8Array> {
       if (kind === 'cMapUrl') {
         const data = await readFile(join(cmapsDir, filename))
         return new Uint8Array(data)
       }
+
       if (kind === 'standardFontDataUrl') {
         const data = await readFile(join(fontsDir, filename))
         return new Uint8Array(data)
       }
+
       throw new Error(`Unsupported binary data kind: ${kind}`)
     }
   }
@@ -119,7 +118,6 @@ async function parsePdf(buffer: Buffer): Promise<string> {
   return pages.join('\n')
 }
 
-// 解析不同格式的文档为纯文本
 async function parseDocument(
   buffer: Buffer,
   mimeType: string
@@ -129,13 +127,12 @@ async function parseDocument(
   }
 
   if (
-    mimeType === 'text/markdown' ||
-    mimeType === 'text/plain' ||
-    mimeType.startsWith('text/')
+    mimeType === 'text/markdown'
+    || mimeType === 'text/plain'
+    || mimeType.startsWith('text/')
   ) {
     let text = buffer.toString('utf-8')
 
-    // Markdown 需要额外处理，去除 Markdown 语法
     if (mimeType === 'text/markdown') {
       const processor = unified()
         .use(remarkParse)
@@ -151,7 +148,6 @@ async function parseDocument(
   throw new Error(`Unsupported file type: ${mimeType}`)
 }
 
-// 完整文档处理流程：解析 → 分块 → 向量化 → 保存
 export async function processDocument(
   props: ProcessDocumentProps
 ): Promise<ProcessingResult> {
@@ -168,7 +164,6 @@ export async function processDocument(
   } = props
 
   try {
-    // 1️⃣ 解析文档为纯文本
     const text = await parseDocument(buffer, mimeType)
     console.log(`[DOC-PROCESSOR] Parsed text length: ${text.length}, trimmed: ${text.trim().length}`)
     console.log(`[DOC-PROCESSOR] Text preview (first 200 chars): ${JSON.stringify(text.slice(0, 200))}`)
@@ -176,28 +171,33 @@ export async function processDocument(
       throw new Error('Document contains no extractable text')
     }
 
-    // 2️⃣ 文本分块（过滤空块，避免空字符串发送给 Embedding API）
     const rawChunks = chunkText(text, chunkSize, overlap)
-    const chunks = rawChunks.filter((c) => c.text.trim().length > 0)
-    console.log(`[DOC-PROCESSOR] Chunks: ${rawChunks.length} raw → ${chunks.length} after empty-filter`)
-    chunks.slice(0, 3).forEach((c, i) =>
-      console.log(`[DOC-PROCESSOR] Chunk[${i}] len=${c.text.length} trimLen=${c.text.trim().length} preview=${JSON.stringify(c.text.slice(0, 80))}`)
-    )
+    const chunks = rawChunks.filter((chunk) => chunk.text.trim().length > 0)
+    console.log(`[DOC-PROCESSOR] Chunks: ${rawChunks.length} raw -> ${chunks.length} after empty-filter`)
+    chunks.slice(0, 3).forEach((chunk, index) => {
+      console.log(
+        `[DOC-PROCESSOR] Chunk[${index}] len=${chunk.text.length} trimLen=${chunk.text.trim().length} preview=${JSON.stringify(chunk.text.slice(0, 80))}`
+      )
+    })
 
-    // 3️⃣ 批量并发向量化并索引到 Elasticsearch（每批 10 个，避免逐条串行）
+    if (chunks.length === 0) {
+      throw new Error('Document contains no indexable text chunks')
+    }
+
     const BATCH_SIZE = 10
     let successCount = 0
 
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE)
       const results = await Promise.allSettled(
-        batch.map(async (chunk, j) => {
-          console.log(`[DOC-PROCESSOR] Embedding chunk ${i + j}: len=${chunk.text.length}, trimLen=${chunk.text.trim().length}`)
+        batch.map(async (chunk, offset) => {
+          console.log(
+            `[DOC-PROCESSOR] Embedding chunk ${i + offset}: len=${chunk.text.length}, trimLen=${chunk.text.trim().length}`
+          )
           const embedding = await embedText(chunk.text, apiKey)
-          const chunkIndex = i + j
+          const chunkIndex = i + offset
           const chunkId = randomUUID()
 
-          // 同时插入到 PostgreSQL（content cache）和 Elasticsearch（vector search）
           await Promise.all([
             prisma.documentChunk.create({
               data: {
@@ -222,46 +222,49 @@ export async function processDocument(
           ])
         })
       )
-      successCount += results.filter((r) => r.status === 'fulfilled').length
-      results
-        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-        .forEach((r, j) => console.error(`Failed to process chunk ${i + j}:`, r.reason))
+
+      const failures = results.flatMap((result, offset) => (
+        result.status === 'rejected'
+          ? [{ chunkIndex: i + offset, reason: result.reason }]
+          : []
+      ))
+
+      failures.forEach((failure) => {
+        console.error(`Failed to process chunk ${failure.chunkIndex}:`, failure.reason)
+      })
+
+      if (failures.length > 0) {
+        throw new Error(
+          `Failed to process ${failures.length} chunk(s): ${failures
+            .map((failure) => `#${failure.chunkIndex}`)
+            .join(', ')}`
+        )
+      }
+
+      successCount += batch.length
     }
 
-    // 4️⃣ 更新文档状态
-    if (successCount === chunks.length) {
-      await prisma.document.update({
-        where: { id: documentId },
-        data: { status: 'ready' },
-      })
-    } else if (successCount > 0) {
-      // 部分 chunk 向量化失败，整体标记为失败以便重试
-      await prisma.document.update({
-        where: { id: documentId },
-        data: { status: 'failed' },
-      })
-      throw new Error(`Only ${successCount}/${chunks.length} chunks were successfully embedded`)
-    } else {
-      // 全部失败
-      await prisma.document.update({
-        where: { id: documentId },
-        data: { status: 'failed' },
-      })
-      throw new Error('No chunks were successfully embedded')
-    }
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { status: 'ready' },
+    })
 
     return {
       success: true,
       chunkCount: successCount,
     }
   } catch (error) {
-    // 标记文档处理失败
+    await purgeDocumentDerivedData(documentId).catch((cleanupError) => {
+      console.error(
+        '[DOC-PROCESSOR] Failed to purge partial chunks:',
+        cleanupError instanceof Error ? cleanupError.message : cleanupError
+      )
+    })
+
     await prisma.document.update({
       where: { id: documentId },
       data: { status: 'failed' },
-    }).catch(() => {
-      // 忽略更新失败的错误
-    })
+    }).catch(() => {})
 
     return {
       success: false,

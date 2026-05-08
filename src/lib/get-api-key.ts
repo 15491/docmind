@@ -1,3 +1,4 @@
+import { decryptStoredApiKey, encryptUserApiKey, isEncryptedApiKey } from './api-key-crypto'
 import { prisma } from './prisma'
 
 export interface UserRagConfig {
@@ -14,38 +15,60 @@ const DEFAULT_RAG: UserRagConfig = {
   temperature: 0.7,
 }
 
-/**
- * 获取用户自定义的 Zhipu API Key
- * 如果用户未设置，返回 null（调用方使用环境变量作为备选）
- */
+function normalizeRagConfig(saved: Partial<UserRagConfig> | null | undefined): UserRagConfig {
+  return {
+    chunkSize: saved?.chunkSize ?? DEFAULT_RAG.chunkSize,
+    overlap: saved?.overlap ?? DEFAULT_RAG.overlap,
+    topK: saved?.topK ?? DEFAULT_RAG.topK,
+    temperature: saved?.temperature ?? DEFAULT_RAG.temperature,
+  }
+}
+
+export async function resolveStoredUserApiKey(
+  userId: string,
+  storedApiKey: string | null | undefined
+): Promise<string | null> {
+  if (!storedApiKey) {
+    return null
+  }
+
+  if (isEncryptedApiKey(storedApiKey)) {
+    return decryptStoredApiKey(storedApiKey)
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { zhipuApiKey: encryptUserApiKey(storedApiKey) },
+    })
+  } catch (error) {
+    console.error(
+      '[user-api-key] Failed to migrate legacy plaintext key:',
+      error instanceof Error ? error.message : String(error)
+    )
+  }
+
+  return storedApiKey
+}
+
 export async function getUserApiKey(userId: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { zhipuApiKey: true },
   })
-  return user?.zhipuApiKey ?? null
+
+  return resolveStoredUserApiKey(userId, user?.zhipuApiKey)
 }
 
-/**
- * 获取用户的 RAG 参数配置，缺失字段用默认值补全
- */
 export async function getUserRagConfig(userId: string): Promise<UserRagConfig> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { zhipuApiKey: true, ragConfig: true },
+    select: { ragConfig: true },
   })
-  const saved = (user?.ragConfig ?? {}) as Partial<UserRagConfig>
-  return {
-    chunkSize: saved.chunkSize ?? DEFAULT_RAG.chunkSize,
-    overlap: saved.overlap ?? DEFAULT_RAG.overlap,
-    topK: saved.topK ?? DEFAULT_RAG.topK,
-    temperature: saved.temperature ?? DEFAULT_RAG.temperature,
-  }
+
+  return normalizeRagConfig((user?.ragConfig ?? {}) as Partial<UserRagConfig>)
 }
 
-/**
- * 同时获取 API Key 和 RAG 配置，只查一次 DB
- */
 export async function getUserContext(userId: string): Promise<{
   apiKey: string | null
   ragConfig: UserRagConfig
@@ -54,14 +77,9 @@ export async function getUserContext(userId: string): Promise<{
     where: { id: userId },
     select: { zhipuApiKey: true, ragConfig: true },
   })
-  const saved = (user?.ragConfig ?? {}) as Partial<UserRagConfig>
+
   return {
-    apiKey: user?.zhipuApiKey ?? null,
-    ragConfig: {
-      chunkSize: saved.chunkSize ?? DEFAULT_RAG.chunkSize,
-      overlap: saved.overlap ?? DEFAULT_RAG.overlap,
-      topK: saved.topK ?? DEFAULT_RAG.topK,
-      temperature: saved.temperature ?? DEFAULT_RAG.temperature,
-    },
+    apiKey: await resolveStoredUserApiKey(userId, user?.zhipuApiKey),
+    ragConfig: normalizeRagConfig((user?.ragConfig ?? {}) as Partial<UserRagConfig>),
   }
 }

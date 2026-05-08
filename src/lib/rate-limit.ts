@@ -1,23 +1,15 @@
 import { rateLimitRedis } from './redis'
+import { rateLimitWithClient } from './rate-limit-core'
 
 /**
- * 基于 Redis 的滑动窗口限流（原子操作）。
- * 使用独立的 Redis 连接，快速失败不重试。
- * @returns ok=false 时应返回 429
+ * 基于 Redis 的滑动窗口限流。
+ * 使用独立 Redis 连接，快速失败，不做重试。
+ * @returns `ok=false` 时应返回 429
  */
 export async function rateLimit(
   key: string,
   max: number,
   windowSeconds: number
 ): Promise<{ ok: boolean; remaining: number }> {
-  const script = `
-    local count = redis.call('INCR', KEYS[1])
-    if count == 1 then
-      redis.call('EXPIRE', KEYS[1], ARGV[1])
-    end
-    return count
-  `
-
-  const count = await rateLimitRedis.eval(script, 1, key, windowSeconds) as number
-  return { ok: count <= max, remaining: Math.max(0, max - count) }
+  return rateLimitWithClient(rateLimitRedis, key, max, windowSeconds)
 }

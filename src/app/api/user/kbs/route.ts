@@ -1,9 +1,20 @@
+import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
 import { prisma } from '@/lib/prisma'
+import { Err, R } from '@/lib/response'
 import { withAuth } from '@/lib/with-auth'
-import { R } from '@/lib/response'
 
-// DELETE /api/user/kbs — 清空当前用户所有知识库（级联删除文档和向量）
 export const DELETE = withAuth(async (_req, _ctx, userId) => {
-  await prisma.knowledgeBase.deleteMany({ where: { userId } })
-  return R.noData()
+  try {
+    const documents = await prisma.document.findMany({
+      where: { knowledgeBase: { userId } },
+      select: { id: true, storageKey: true },
+    })
+
+    await cleanupDocumentArtifacts(documents)
+    await prisma.knowledgeBase.deleteMany({ where: { userId } })
+    return R.noData()
+  } catch (error) {
+    console.error('[/api/user/kbs] DELETE Error:', error)
+    return Err.internal('清空知识库失败')
+  }
 })
