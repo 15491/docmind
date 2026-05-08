@@ -1,5 +1,6 @@
-import { decryptStoredApiKey, encryptUserApiKey, isEncryptedApiKey } from './api-key-crypto'
+import { decryptStoredApiKey, isEncryptedApiKey } from './api-key-crypto'
 import { prisma } from './prisma'
+import { buildEncryptedApiKeyForMigration } from './user-api-key-migration'
 
 export interface UserRagConfig {
   chunkSize: number
@@ -36,10 +37,15 @@ export async function resolveStoredUserApiKey(
     return decryptStoredApiKey(storedApiKey)
   }
 
+  const encryptedApiKey = buildEncryptedApiKeyForMigration(storedApiKey)
+  if (!encryptedApiKey) {
+    return storedApiKey
+  }
+
   try {
     await prisma.user.update({
       where: { id: userId },
-      data: { zhipuApiKey: encryptUserApiKey(storedApiKey) },
+      data: { zhipuApiKey: encryptedApiKey },
     })
   } catch (error) {
     console.error(
