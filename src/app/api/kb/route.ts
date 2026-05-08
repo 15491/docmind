@@ -1,27 +1,16 @@
 import { prisma } from '@/lib/prisma'
-import { withAuth } from '@/lib/with-auth'
 import { Err, R } from '@/lib/response'
-
-const DEFAULT_PAGE_SIZE = 12
-const MAX_PAGE_SIZE = 48
-
-function parsePositiveInt(value: string | null, fallback: number) {
-  const parsed = Number.parseInt(value ?? '', 10)
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback
-  return parsed
-}
+import { isValidationErrorResponse, parseJsonBody, validateSearchParams } from '@/lib/validate-request'
+import { createKbSchema, kbListQuerySchema } from '@/lib/validators'
+import { withAuth } from '@/lib/with-auth'
 
 export const GET = withAuth(async (req, _ctx, userId) => {
   try {
-    const pageSize = Math.min(
-      parsePositiveInt(req.nextUrl.searchParams.get('pageSize'), DEFAULT_PAGE_SIZE),
-      MAX_PAGE_SIZE,
-    )
-    const requestedPage = parsePositiveInt(req.nextUrl.searchParams.get('page'), 1)
+    const query = validateSearchParams(req.nextUrl.searchParams, kbListQuerySchema)
+    if (isValidationErrorResponse(query)) return query
 
-    const total = await prisma.knowledgeBase.count({
-      where: { userId },
-    })
+    const { pageSize, page: requestedPage } = query
+    const total = await prisma.knowledgeBase.count({ where: { userId } })
 
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
     const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
@@ -55,14 +44,11 @@ export const GET = withAuth(async (req, _ctx, userId) => {
 
 export const POST = withAuth(async (req, _ctx, userId) => {
   try {
-    const body = await req.json() as { name?: string }
-    const name = body.name?.trim()
-
-    if (!name) return Err.invalid('知识库名称不能为空')
-    if (name.length > 100) return Err.invalid('知识库名称不能超过 100 个字符')
+    const body = await parseJsonBody(req, createKbSchema)
+    if (isValidationErrorResponse(body)) return body
 
     const kb = await prisma.knowledgeBase.create({
-      data: { name, userId },
+      data: { name: body.name, userId },
     })
 
     return R.created({

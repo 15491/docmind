@@ -1,14 +1,17 @@
 import { prisma } from '@/lib/prisma'
 import { getPresignedUrl } from '@/lib/minio'
+import { Err, R } from '@/lib/response'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
+import { idParamSchema } from '@/lib/validators'
 import { withAuth } from '@/lib/with-auth'
-import { R, Err } from '@/lib/response'
 
 export const GET = withAuth(async (_req, ctx, userId) => {
   try {
-    const { id: documentId } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
     const document = await prisma.document.findUnique({
-      where: { id: documentId },
+      where: { id: params.id },
       select: {
         id: true,
         storageKey: true,
@@ -22,7 +25,6 @@ export const GET = withAuth(async (_req, ctx, userId) => {
     if (!document.storageKey) return Err.notFound('文档文件不存在')
 
     const presignedUrl = await getPresignedUrl(document.storageKey, 3600)
-
     return R.ok({ url: presignedUrl, documentId: document.id })
   } catch (error) {
     console.error('[/api/files/[id]] Error:', error)

@@ -1,14 +1,16 @@
 import { prisma } from '@/lib/prisma'
+import { Err, R } from '@/lib/response'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
+import { idParamSchema } from '@/lib/validators'
 import { withAuth } from '@/lib/with-auth'
-import { R, Err } from '@/lib/response'
 
-// GET /api/sessions/[id]/messages — 查询会话的所有消息
 export const GET = withAuth(async (_req, ctx, userId) => {
   try {
-    const { id: sessionId } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
     const chatSession = await prisma.chatSession.findUnique({
-      where: { id: sessionId },
+      where: { id: params.id },
       include: { knowledgeBase: true },
     })
 
@@ -16,7 +18,7 @@ export const GET = withAuth(async (_req, ctx, userId) => {
     if (chatSession.knowledgeBase.userId !== userId) return Err.forbidden('无权访问此会话')
 
     const messages = await prisma.message.findMany({
-      where: { sessionId },
+      where: { sessionId: params.id },
       orderBy: { createdAt: 'asc' },
     })
 
@@ -26,13 +28,13 @@ export const GET = withAuth(async (_req, ctx, userId) => {
         title: chatSession.title || '新对话',
         createdAt: chatSession.createdAt,
       },
-      messages: messages.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        sources: msg.sources || [],
-        analysis: msg.analysis || null,
-        createdAt: msg.createdAt,
+      messages: messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        sources: message.sources || [],
+        analysis: message.analysis || null,
+        createdAt: message.createdAt,
       })),
     })
   } catch (error) {

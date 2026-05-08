@@ -7,15 +7,11 @@ import { webSearch, type WebResult } from '@/lib/web-search'
 import { rateLimit } from '@/lib/rate-limit'
 import { getUserContext } from '@/lib/get-api-key'
 import { Err } from '@/lib/response'
+import { chatSchema } from '@/lib/validators'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
 import { formatContext, streamDocumentAnswer } from '@/lib/langchain/chains/document-qa'
 import { extractAnswerMetadata } from '@/lib/langchain/chains/structured-answer'
 import { KnowledgeBaseRetriever } from '@/lib/langchain/retrievers/kb-retriever'
-
-interface ChatRequest {
-  question: string
-  kbId: string
-  sessionId?: string
-}
 
 interface RetrievedChunk {
   id: string
@@ -93,11 +89,10 @@ export const POST = withAuth(async (req, _ctx, userId) => {
     const { ok } = await rateLimit(`rl:chat:${userId}`, 20, 60)
     if (!ok) return Err.tooMany('操作过于频繁，请稍后再试')
 
-    const body = await req.json() as ChatRequest
-    const { question, kbId, sessionId } = body
+    const body = await parseJsonBody(req, chatSchema)
+    if (isValidationErrorResponse(body)) return body
 
-    if (!question?.trim()) return Err.invalid('问题不能为空')
-    if (!kbId) return Err.invalid('缺少知识库ID')
+    const { question, kbId, sessionId } = body
 
     const kb = await prisma.knowledgeBase.findUnique({ where: { id: kbId } })
     if (!kb) return Err.notFound('知识库不存在')

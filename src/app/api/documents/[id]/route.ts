@@ -1,14 +1,17 @@
 import { prisma } from '@/lib/prisma'
-import { withAuth } from '@/lib/with-auth'
-import { Err, R } from '@/lib/response'
 import { deleteDocumentChunks } from '@/lib/elasticsearch'
+import { Err, R } from '@/lib/response'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
+import { idParamSchema } from '@/lib/validators'
+import { withAuth } from '@/lib/with-auth'
 
 export const GET = withAuth(async (_req, ctx, userId) => {
   try {
-    const { id: documentId } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
     const document = await prisma.document.findUnique({
-      where: { id: documentId },
+      where: { id: params.id },
       include: {
         _count: { select: { chunks: true } },
         knowledgeBase: { select: { userId: true } },
@@ -37,10 +40,11 @@ export const GET = withAuth(async (_req, ctx, userId) => {
 
 export const DELETE = withAuth(async (_req, ctx, userId) => {
   try {
-    const { id: documentId } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
     const document = await prisma.document.findUnique({
-      where: { id: documentId },
+      where: { id: params.id },
       select: { id: true, knowledgeBase: { select: { userId: true } } },
     })
 
@@ -48,13 +52,12 @@ export const DELETE = withAuth(async (_req, ctx, userId) => {
     if (document.knowledgeBase.userId !== userId) return Err.forbidden('无权删除该文档')
 
     try {
-      await deleteDocumentChunks(documentId)
-    } catch (err) {
-      console.error('[DELETE document] ES cleanup failed:', err)
+      await deleteDocumentChunks(params.id)
+    } catch (error) {
+      console.error('[DELETE document] ES cleanup failed:', error)
     }
 
-    await prisma.document.deleteMany({ where: { id: documentId } })
-
+    await prisma.document.deleteMany({ where: { id: params.id } })
     return R.noData()
   } catch (error) {
     console.error('[/api/documents/[id]] DELETE Error:', error)

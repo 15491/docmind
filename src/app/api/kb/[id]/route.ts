@@ -1,11 +1,19 @@
 import { prisma } from '@/lib/prisma'
-import { withAuth } from '@/lib/with-auth'
 import { Err, R } from '@/lib/response'
+import {
+  isValidationErrorResponse,
+  parseJsonBody,
+  validateRouteParams,
+} from '@/lib/validate-request'
+import { createKbSchema, idParamSchema } from '@/lib/validators'
+import { withAuth } from '@/lib/with-auth'
 
 export const GET = withAuth(async (_req, ctx, userId) => {
   try {
-    const { id } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
+    const { id } = params
     const kb = await prisma.knowledgeBase.findUnique({
       where: { id },
       include: { _count: { select: { documents: true } } },
@@ -30,16 +38,14 @@ export const GET = withAuth(async (_req, ctx, userId) => {
 
 export const PATCH = withAuth(async (req, ctx, userId) => {
   try {
-    const { id } = await ctx.params
-    const body = await req.json() as { name?: string }
-    const name = body.name?.trim()
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
-    if (!name) return Err.invalid('知识库名称不能为空')
-    if (name.length < 2) return Err.invalid('知识库名称至少需要 2 个字符')
-    if (name.length > 100) return Err.invalid('知识库名称不能超过 100 个字符')
+    const body = await parseJsonBody(req, createKbSchema)
+    if (isValidationErrorResponse(body)) return body
 
     const existingKb = await prisma.knowledgeBase.findUnique({
-      where: { id },
+      where: { id: params.id },
       select: { id: true, userId: true },
     })
 
@@ -47,8 +53,8 @@ export const PATCH = withAuth(async (req, ctx, userId) => {
     if (existingKb.userId !== userId) return Err.forbidden('无权修改此知识库')
 
     const kb = await prisma.knowledgeBase.update({
-      where: { id },
-      data: { name },
+      where: { id: params.id },
+      data: { name: body.name },
       include: { _count: { select: { documents: true } } },
     })
 
@@ -68,15 +74,14 @@ export const PATCH = withAuth(async (req, ctx, userId) => {
 
 export const DELETE = withAuth(async (_req, ctx, userId) => {
   try {
-    const { id } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
-    const kb = await prisma.knowledgeBase.findUnique({ where: { id } })
-
+    const kb = await prisma.knowledgeBase.findUnique({ where: { id: params.id } })
     if (!kb) return Err.notFound('知识库不存在')
     if (kb.userId !== userId) return Err.forbidden('无权删除此知识库')
 
-    await prisma.knowledgeBase.delete({ where: { id } })
-
+    await prisma.knowledgeBase.delete({ where: { id: params.id } })
     return R.noData()
   } catch (error) {
     console.error('[/api/kb/[id] DELETE] Error:', error)

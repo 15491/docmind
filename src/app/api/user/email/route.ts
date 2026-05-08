@@ -1,27 +1,23 @@
 import { prisma } from '@/lib/prisma'
 import { verifyCode } from '@/lib/verify-code'
+import { Err, R } from '@/lib/response'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
+import { changeEmailSchema } from '@/lib/validators'
 import { withAuth } from '@/lib/with-auth'
-import { R, Err } from '@/lib/response'
 
-// PATCH /api/user/email — 修改绑定邮箱
 export const PATCH = withAuth(async (req, _ctx, userId) => {
   try {
-    const body = await req.json().catch(() => null) as { email?: string; code?: string } | null
-    const { email, code } = body ?? {}
+    const body = await parseJsonBody(req, changeEmailSchema)
+    if (isValidationErrorResponse(body)) return body
 
-    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return Err.invalid('邮箱格式不正确')
-    }
-    if (!code || typeof code !== 'string') return Err.invalid('验证码不能为空')
-
+    const { email, code } = body
     const result = await verifyCode('change-email', email, code)
     if (!result.ok) return Err.invalid(result.error)
 
     const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing && existing.id !== userId) return Err.conflict('该邮箱已被其他账户使用')
+    if (existing && existing.id !== userId) return Err.conflict('该邮箱已被其他账号使用')
 
     await prisma.user.update({ where: { id: userId }, data: { email } })
-
     return R.noData()
   } catch (error) {
     console.error('[/api/user/email] Error:', error)

@@ -1,45 +1,69 @@
 import { NextResponse } from 'next/server'
-import { ZodSchema, ZodError } from 'zod'
+import { z, ZodError, type ZodTypeAny } from 'zod'
 
-/**
- * 验证请求数据
- * @param data 要验证的数据
- * @param schema Zod 验证 schema
- * @returns 验证成功返回数据，失败返回 NextResponse 错误响应
- */
-export function validateRequest<T>(
+const INVALID_JSON = Symbol('INVALID_JSON')
+
+function validationErrorResponse(message: string, details?: ZodError['issues']) {
+  return NextResponse.json(
+    {
+      ok: false,
+      code: 'INVALID_INPUT',
+      message,
+      ...(details ? { details } : {}),
+    },
+    { status: 422 }
+  )
+}
+
+export function isValidationErrorResponse(value: unknown): value is NextResponse {
+  return value instanceof NextResponse
+}
+
+export function validateRequest<TSchema extends ZodTypeAny>(
   data: unknown,
-  schema: ZodSchema
-): T | NextResponse {
+  schema: TSchema
+): z.infer<TSchema> | NextResponse {
   try {
-    return schema.parse(data) as T
+    return schema.parse(data)
   } catch (error) {
     if (error instanceof ZodError) {
-      const message = error.errors[0]?.message || '参数验证失败'
-      return NextResponse.json(
-        {
-          error: 'VALIDATION_ERROR',
-          message,
-          details: error.errors,
-        },
-        { status: 422 }
-      )
+      const message = error.errors[0]?.message || '参数校验失败'
+      return validationErrorResponse(message, error.errors)
     }
-    return NextResponse.json(
-      {
-        error: 'VALIDATION_ERROR',
-        message: '参数验证失败',
-      },
-      { status: 422 }
-    )
+
+    return validationErrorResponse('参数校验失败')
   }
 }
 
-/**
- * 验证文件大小和类型
- */
+export async function parseJsonBody<TSchema extends ZodTypeAny>(
+  req: Request,
+  schema: TSchema,
+  invalidJsonMessage = '请求体格式错误'
+): Promise<z.infer<TSchema> | NextResponse> {
+  const body = await req.json().catch(() => INVALID_JSON)
+  if (body === INVALID_JSON) {
+    return validationErrorResponse(invalidJsonMessage)
+  }
+
+  return validateRequest(body, schema)
+}
+
+export function validateSearchParams<TSchema extends ZodTypeAny>(
+  searchParams: URLSearchParams,
+  schema: TSchema
+): z.infer<TSchema> | NextResponse {
+  return validateRequest(Object.fromEntries(searchParams.entries()), schema)
+}
+
+export async function validateRouteParams<TSchema extends ZodTypeAny>(
+  params: Promise<Record<string, string>> | Record<string, string>,
+  schema: TSchema
+): Promise<z.infer<TSchema> | NextResponse> {
+  return validateRequest(await params, schema)
+}
+
 export interface FileValidationOptions {
-  maxSize?: number // 字节
+  maxSize?: number
   allowedTypes?: string[]
 }
 

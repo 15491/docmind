@@ -1,20 +1,22 @@
 import { prisma } from '@/lib/prisma'
-import { documentQueue } from '@/lib/queue'
 import { deleteDocumentChunks } from '@/lib/elasticsearch'
+import { documentQueue } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
+import { Err, R } from '@/lib/response'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
+import { idParamSchema } from '@/lib/validators'
 import { withAuth } from '@/lib/with-auth'
-import { R, Err } from '@/lib/response'
 
-// POST /api/documents/[id]/retry — 重新处理失败文档
 export const POST = withAuth(async (_req, ctx, userId) => {
   try {
     const { ok } = await rateLimit(`rl:retry:${userId}`, 10, 60)
     if (!ok) return Err.tooMany('操作过于频繁，请稍后再试')
 
-    const { id: documentId } = await ctx.params
+    const params = await validateRouteParams(ctx.params, idParamSchema)
+    if (isValidationErrorResponse(params)) return params
 
     const document = await prisma.document.findUnique({
-      where: { id: documentId },
+      where: { id: params.id },
       include: { knowledgeBase: true },
     })
 
@@ -23,28 +25,27 @@ export const POST = withAuth(async (_req, ctx, userId) => {
     if (document.status !== 'failed') return Err.invalid('只有处理失败的文档才能重试')
     if (!document.storageKey) return Err.invalid('文档存储路径丢失，无法重试，请重新上传')
 
-    await deleteDocumentChunks(documentId).catch((err) => {
-      console.error('[retry] Failed to delete old chunks:', err)
+    await deleteDocumentChunks(params.id).catch((error) => {
+      console.error('[retry] Failed to delete old chunks:', error)
     })
 
-    await prisma.documentChunk.deleteMany({ where: { documentId } })
-
+    await prisma.documentChunk.deleteMany({ where: { documentId: params.id } })
     await prisma.document.update({
-      where: { id: documentId },
+      where: { id: params.id },
       data: { status: 'processing' },
     })
 
     await documentQueue.add(
       'process-document',
       {
-        documentId,
+        documentId: params.id,
         knowledgeBaseId: document.knowledgeBaseId,
         userId,
         fileName: document.fileName,
         mimeType: document.mimeType,
         objectKey: document.storageKey,
       },
-      { jobId: `doc-${documentId}` }
+      { jobId: `doc-${params.id}` }
     )
 
     return R.noData()
