@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyCode } from '@/lib/verify-code'
 import { withAuth } from '@/lib/with-auth'

@@ -14,33 +14,23 @@ export interface DocumentJob {
   userId: string
   fileName: string
   mimeType: string
-  objectKey: string // MinIO 对象存储路径
+  objectKey: string
   ragConfig?: RagConfig
 }
 
-// 初始化文档处理队列
 export const documentQueue = new Queue<DocumentJob>('docmind-documents', {
   connection: redis,
   defaultJobOptions: {
-    attempts: 5, // 最多重试 5 次（考虑到临时文件可能延迟）
+    attempts: 5,
     backoff: {
       type: 'exponential',
-      delay: 3000, // 初始延迟 3 秒
+      delay: 3000,
     },
     removeOnComplete: true,
-    removeOnFail: { count: 100 }, // 保留最近 100 条失败记录供排查
+    removeOnFail: { count: 100 },
   },
 })
 
-// 监听队列事件
-;(documentQueue as any).on('completed', (job: any) => {
-  console.log(`[Queue] Job ${job.id} completed`, job.data.documentId)
-})
-
-;(documentQueue as any).on('failed', (job: any, err: any) => {
-  console.error(`[Queue] Job ${job?.id} failed:`, err.message)
-})
-
-;(documentQueue as any).on('error', (error: any) => {
+documentQueue.on('error', (error: Error) => {
   console.error('[Queue] Error:', error)
 })

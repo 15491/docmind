@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server'
 import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { documentQueue } from '@/lib/queue'

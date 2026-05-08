@@ -9,7 +9,6 @@ import { AuthLogo } from "@/components/auth/auth-logo"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
 import { EyeIcon, ClearIcon, INPUT_CLS, LABEL_CLS, ICON_BTN_CLS } from "@/components/auth/form-ui"
 import { useLoginFlow } from "./hooks"
-import type { LoginStep } from "./types"
 
 const OAUTH_ERRORS: Record<string, string> = {
   OAuthCallbackError: "OAuth 授权失败，请重试",

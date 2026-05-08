@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { unified } from 'unified'
+import { unified, type Plugin } from 'unified'
 import remarkParse from 'remark-parse'
 import stripMarkdown from 'strip-markdown'
 import { chunkText } from './chunk'
@@ -25,14 +25,42 @@ export interface ProcessingResult {
   error?: string
 }
 
+type MarkdownNode = {
+  type: string
+  value?: string
+  children?: MarkdownNode[]
+}
+
+const stripMarkdownPlugin = stripMarkdown as unknown as Plugin
+
+function hasChildren(node: MarkdownNode): node is MarkdownNode & { children: MarkdownNode[] } {
+  return 'children' in node && Array.isArray(node.children)
+}
+
+function hasValue(node: MarkdownNode): node is MarkdownNode & { value: string } {
+  return 'value' in node && typeof node.value === 'string'
+}
+
+function markdownTreeToText(node: MarkdownNode): string {
+  if (hasValue(node)) {
+    return node.value
+  }
+
+  if (!hasChildren(node)) {
+    return ''
+  }
+
+  const content = node.children.map(markdownTreeToText).join('')
+  return node.type === 'paragraph' ? `${content}\n\n` : content
+}
+
 // 用 pdfjs-dist 解析 PDF，比 pdf-parse 更好地支持 CJK CID 字体
 async function parsePdf(buffer: Buffer): Promise<string> {
   const { join } = await import('path')
   const { pathToFileURL } = await import('url')
   const { readFile } = await import('fs/promises')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs') as typeof import('pdfjs-dist/types/src/pdf')
 
   // pdfjs-dist v5 在 Node.js 下必须指定真实 worker 文件
   const workerPath = join(process.cwd(), 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs')
@@ -111,10 +139,10 @@ async function parseDocument(
     if (mimeType === 'text/markdown') {
       const processor = unified()
         .use(remarkParse)
-        .use(stripMarkdown as any)
+        .use(stripMarkdownPlugin)
       const ast = processor.parse(text)
-      const result = processor.runSync(ast) as any
-      text = result.value as string
+      const result = processor.runSync(ast) as unknown as MarkdownNode
+      text = markdownTreeToText(result).trim()
     }
 
     return text

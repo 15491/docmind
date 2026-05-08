@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { Search } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -12,7 +12,16 @@ type GlobalSearchProps = {
 
 export function GlobalSearch({ collapsed }: GlobalSearchProps) {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+  const [openPathname, setOpenPathname] = useState<string | null>(null)
+
+  const open = openPathname === pathname
+  const setOpen = useCallback((nextOpen: boolean | ((currentOpen: boolean) => boolean)) => {
+    setOpenPathname((currentPathname) => {
+      const currentOpen = currentPathname === pathname
+      const resolvedOpen = typeof nextOpen === "function" ? nextOpen(currentOpen) : nextOpen
+      return resolvedOpen ? pathname : null
+    })
+  }, [pathname])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -24,11 +33,7 @@ export function GlobalSearch({ collapsed }: GlobalSearchProps) {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
-
-  useEffect(() => {
-    setOpen(false)
-  }, [pathname])
+  }, [setOpen])
 
   return (
     <>

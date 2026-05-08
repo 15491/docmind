@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { embedText } from '@/lib/rag/embeddings'
 import { rateLimit } from '@/lib/rate-limit'
