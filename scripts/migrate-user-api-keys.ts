@@ -1,5 +1,9 @@
-import { prisma } from '../src/lib/prisma'
+import { loadEnvConfig } from '@next/env'
 import { migrateLegacyUserApiKeysWithDeps } from '../src/lib/user-api-key-migration'
+
+loadEnvConfig(process.cwd())
+
+let prismaForCleanup: { $disconnect: () => Promise<unknown> } | null = null
 
 function parseArgs(argv: string[]) {
   let dryRun = false
@@ -24,6 +28,8 @@ function parseArgs(argv: string[]) {
 }
 
 async function main() {
+  const { prisma } = await import('../src/lib/prisma')
+  prismaForCleanup = prisma
   const { dryRun, batchSize } = parseArgs(process.argv.slice(2))
 
   console.log(
@@ -68,5 +74,5 @@ main()
     process.exitCode = 1
   })
   .finally(async () => {
-    await prisma.$disconnect()
+    await prismaForCleanup?.$disconnect()
   })
