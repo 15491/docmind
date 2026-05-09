@@ -10,6 +10,11 @@ const CONTENT_X_PADDING = "px-8"
 
 export default function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = use(params)
+
+  return <SessionPageContent key={`${id}:${sessionId}`} id={id} sessionId={sessionId} />
+}
+
+function SessionPageContent({ id, sessionId }: { id: string; sessionId: string }) {
   const { messages, input, setInput, streaming, error, textareaRef, bottomRef, handleSend } = useChat(id, sessionId)
 
   return (

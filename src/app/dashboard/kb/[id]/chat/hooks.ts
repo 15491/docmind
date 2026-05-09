@@ -6,7 +6,9 @@ import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { http } from "@/lib/request"
 import type { Message } from "./types"
 
-export function useChat(kbId: string, sessionId?: string, initialMessages: Message[] = []) {
+const EMPTY_MESSAGES: Message[] = []
+
+export function useChat(kbId: string, sessionId?: string, initialMessages: Message[] = EMPTY_MESSAGES) {
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
@@ -14,26 +16,50 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const activeSessionId = useRef<string | undefined>(sessionId)
+  const viewVersionRef = useRef(0)
+  const localMutationCountRef = useRef(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (sessionId && messages.length === 0) {
-      http.get<{ messages: Message[] }>(`/api/sessions/${sessionId}/messages`)
-        .then((data) => setMessages(data.messages ?? []))
-        .catch((err) => setError(err instanceof Error ? err.message : "加载消息失败"))
+    viewVersionRef.current += 1
+    localMutationCountRef.current = 0
+    activeSessionId.current = sessionId
+
+    if (!sessionId || initialMessages.length > 0) {
+      return
     }
-  }, [sessionId, messages.length])
+
+    const currentViewVersion = viewVersionRef.current
+    http.get<{ messages: Message[] }>(`/api/sessions/${sessionId}/messages`)
+      .then((data) => {
+        if (viewVersionRef.current !== currentViewVersion || localMutationCountRef.current > 0) {
+          return
+        }
+        setMessages(data.messages ?? [])
+      })
+      .catch((err) => {
+        if (viewVersionRef.current !== currentViewVersion) {
+          return
+        }
+        setError(err instanceof Error ? err.message : "加载消息失败")
+      })
+  }, [initialMessages, sessionId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, streaming])
+
+  const markLocalMessageMutation = () => {
+    localMutationCountRef.current += 1
+  }
 
   const handleSend = async (text?: string) => {
     const content = (text ?? input).trim()
     if (!content || streaming) return
 
     setError(null)
+    markLocalMessageMutation()
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content }])
     setInput("")
     if (textareaRef.current) textareaRef.current.style.height = "auto"
@@ -46,6 +72,7 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
     let analysisPending = false
 
     const syncAssistantMessage = (createIfMissing = true) => {
+      markLocalMessageMutation()
       setMessages((prev) => {
         const last = prev[prev.length - 1]
         const nextMessage: Message = {

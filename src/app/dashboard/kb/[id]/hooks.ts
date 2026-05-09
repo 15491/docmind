@@ -6,6 +6,13 @@ import { ApiError, http } from "@/lib/request"
 import type { Kb } from "@/app/dashboard/types"
 import type { Doc } from "./types"
 
+const DOCS_FIRST_PAGE_SIZE = 20
+
+function mergeLatestPageIntoLoadedDocs(latestDocs: Doc[], currentDocs: Doc[]) {
+  const latestIds = new Set(latestDocs.map((doc) => doc.id))
+  return [...latestDocs, ...currentDocs.filter((doc) => !latestIds.has(doc.id))]
+}
+
 export function useKbInfo(kbId: string) {
   const [kb, setKb] = useState<Kb | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,16 +51,25 @@ export function useDocList(kbId: string, onCountChange?: () => void) {
   const [batchDeleting, setBatchDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const hasLoadedMoreRef = useRef(false)
 
-  const fetchDocs = useCallback(async () => {
+  const fetchDocs = useCallback(async (mode: "replace" | "merge" = "replace") => {
     try {
       const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
         `/api/documents/status?kbId=${kbId}`
       )
-      setDocs(data.documents)
-      setNextCursor(data.nextCursor ?? null)
+      const latestDocs = data.documents ?? []
+      const shouldMerge = mode === "merge" && hasLoadedMoreRef.current
+
+      setDocs((prev) => shouldMerge ? mergeLatestPageIntoLoadedDocs(latestDocs, prev) : latestDocs)
+
+      if (!shouldMerge) {
+        hasLoadedMoreRef.current = false
+        setNextCursor(data.nextCursor ?? null)
+      }
+
       setError(null)
-      return data.documents.some((doc) => doc.status === "processing")
+      return latestDocs.some((doc) => doc.status === "processing")
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "获取文档失败")
       return false
@@ -68,7 +84,13 @@ export function useDocList(kbId: string, onCountChange?: () => void) {
       const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
         `/api/documents/status?kbId=${kbId}&cursor=${nextCursor}`
       )
-      setDocs((prev) => [...prev, ...data.documents])
+      const appendedDocs = data.documents ?? []
+      setDocs((prev) => {
+        if (prev.length >= DOCS_FIRST_PAGE_SIZE && appendedDocs.length > 0) {
+          hasLoadedMoreRef.current = true
+        }
+        return [...prev, ...appendedDocs]
+      })
       setNextCursor(data.nextCursor ?? null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "加载更多文档失败")
@@ -89,7 +111,7 @@ export function useDocList(kbId: string, onCountChange?: () => void) {
     let pollCount = 0
     intervalRef.current = setInterval(async () => {
       pollCount += 1
-      const stillProcessing = await fetchDocs()
+      const stillProcessing = await fetchDocs("merge")
       if (!stillProcessing || pollCount >= 30) {
         stopPolling()
       }

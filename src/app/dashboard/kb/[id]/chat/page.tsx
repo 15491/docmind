@@ -13,6 +13,11 @@ const CONTENT_X_PADDING = "px-8"
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+
+  return <ChatPageContent key={`${id}:new`} id={id} />
+}
+
+function ChatPageContent({ id }: { id: string }) {
   const { kb } = useKb()
   const kbName = kb?.name ?? "知识库"
   const docCount = kb?.documentCount ?? 0
