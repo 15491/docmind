@@ -17,6 +17,11 @@ export function useLoginFlow() {
     e.preventDefault()
     startPending(async () => {
       const result = await signIn("credentials", { email, password, redirect: false })
+      if (result?.error === "rate_limited") {
+        toast.error("登录尝试过于频繁，请稍后再试")
+        return
+      }
+
       if (result?.error === "oauth_only") {
         toast.error(THIRD_PARTY_PASSWORD_SIGNIN_MESSAGE)
         return

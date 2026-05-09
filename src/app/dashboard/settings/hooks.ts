@@ -28,42 +28,36 @@ export function useProfileForm() {
   }, [])
 
   const handleSave = async () => {
-    const tasks: Promise<void>[] = []
-    let shouldSignOutAfterSave = false
-
-    if (nickname.trim()) {
-      tasks.push(
-        http.patch("/api/user", { name: nickname.trim() })
-          .then(() => {})
-          .catch((err) => {
-            throw new Error(err instanceof ApiError ? err.message : "昵称保存失败")
-          })
-      )
-    }
-
+    const trimmedNickname = nickname.trim()
     const isUpdatingPassword = Boolean(oldPwd || newPwd)
-    if (isUpdatingPassword) {
+    let nicknameSaved = false
+
+    try {
+      if (trimmedNickname) {
+        await http.patch("/api/user", { name: trimmedNickname }).catch((err) => {
+          throw new Error(err instanceof ApiError ? err.message : "昵称保存失败")
+        })
+        nicknameSaved = true
+      }
+
+      if (!isUpdatingPassword) {
+        toast.success("保存成功")
+        return
+      }
+
       if (hasPassword === null) {
-        const error = new Error("账户信息加载中，请稍后重试")
-        toast.error(error.message)
-        throw error
+        throw new Error("账户信息加载中，请稍后重试")
       }
 
       if (!newPwd) {
-        const error = new Error(hasPassword ? "请输入新密码" : "请输入登录密码")
-        toast.error(error.message)
-        throw error
+        throw new Error(hasPassword ? "请输入新密码" : "请输入登录密码")
       }
 
       if (hasPassword && !oldPwd) {
-        const error = new Error("请输入当前密码")
-        toast.error(error.message)
-        throw error
+        throw new Error("请输入当前密码")
       }
 
-      shouldSignOutAfterSave = true
-      tasks.push(
-        http.patch("/api/user/password", hasPassword
+      await http.patch("/api/user/password", hasPassword
           ? { oldPassword: oldPwd, newPassword: newPwd }
           : { newPassword: newPwd })
           .then(() => {
@@ -74,23 +68,15 @@ export function useProfileForm() {
           .catch((err) => {
             throw new Error(err instanceof ApiError ? err.message : hasPassword ? "密码修改失败" : "密码设置失败")
           })
-      )
-    }
 
-    const results = await Promise.allSettled(tasks)
-    const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected")
-    if (failed.length > 0) {
-      toast.error(failed[0].reason?.message ?? "保存失败")
-      throw failed[0].reason
-    }
-
-    if (shouldSignOutAfterSave) {
       toast.success("密码已更新，请重新登录")
       await signOut({ redirectTo: "/login" })
-      return
+    } catch (error) {
+      const baseMessage = error instanceof Error ? error.message : "保存失败"
+      const message = nicknameSaved && isUpdatingPassword ? `${baseMessage}，昵称已保存` : baseMessage
+      toast.error(message)
+      throw new Error(message)
     }
-
-    toast.success("保存成功")
   }
 
   const handleGithubLink = async () => {

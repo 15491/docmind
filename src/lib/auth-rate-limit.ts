@@ -28,3 +28,17 @@ export async function limitSendCodeRequest(
     remaining: Math.min(emailLimit.remaining, ipLimit.remaining),
   }
 }
+
+export async function limitCredentialsSignInRequest(req: HeaderCarrier, email: string) {
+  const normalizedEmail = normalizeEmailAddress(email)
+  const clientIp = getClientIp(req)
+  const limits = await Promise.all([
+    rateLimit(buildRateLimitKey('rl:signin:ip', clientIp), 30, 600),
+    rateLimit(buildRateLimitKey('rl:signin:email', normalizedEmail || 'unknown'), 10, 600),
+  ])
+
+  return {
+    ok: limits.every((limit) => limit.ok),
+    remaining: Math.min(...limits.map((limit) => limit.remaining)),
+  }
+}

@@ -1,4 +1,5 @@
 import { changeEmailWithDeps } from '@/lib/email-route-core'
+import { isUniqueConstraintError } from '@/lib/prisma-errors'
 import { prisma } from '@/lib/prisma'
 import { verifyCode } from '@/lib/verify-code'
 import { Err } from '@/lib/response'
@@ -26,6 +27,10 @@ export const PATCH = withAuth(async (req, _ctx, userId) => {
       revokeAllSessions,
     })
   } catch (error) {
+    if (isUniqueConstraintError(error, 'email')) {
+      return Err.conflict('该邮箱已被其他账号使用')
+    }
+
     console.error('[/api/user/email] Error:', error)
     return Err.internal('修改邮箱失败')
   }

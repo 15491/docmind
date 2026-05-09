@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "migrate:user-api-keys": "tsx scripts/migrate-user-api-keys.ts",
-    "test": "node --import tsx --test tests/validation.test.ts tests/rate-limit.test.ts tests/api-key-crypto.test.ts tests/document-cleanup.test.ts tests/auth-rate-limit.test.ts tests/credentials-auth-core.test.ts tests/password-route-core.test.ts tests/email-route-core.test.ts tests/verify-code.test.ts tests/queue.test.ts tests/document-job-guard.test.ts tests/document-route-core.test.ts tests/search-route-core.test.ts tests/session-route-core.test.ts tests/chat-route-core.test.ts tests/user-api-key-migration.test.ts",
+    "test": "node --import tsx --test tests/validation.test.ts tests/rate-limit.test.ts tests/api-key-crypto.test.ts tests/document-cleanup.test.ts tests/auth-rate-limit.test.ts tests/auth-callbacks.test.ts tests/credentials-auth-core.test.ts tests/password-route-core.test.ts tests/email-route-core.test.ts tests/verify-code.test.ts tests/queue.test.ts tests/document-job-guard.test.ts tests/document-route-core.test.ts tests/search-route-core.test.ts tests/session-route-core.test.ts tests/chat-route-core.test.ts tests/user-api-key-migration.test.ts",
     "worker": "tsx src/worker-process.ts"
   },
   "dependencies": {

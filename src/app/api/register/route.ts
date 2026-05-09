@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { isUniqueConstraintError } from '@/lib/prisma-errors'
 import { prisma } from '@/lib/prisma'
 import { verifyCode } from '@/lib/verify-code'
 import { Err, R } from '@/lib/response'
@@ -17,9 +18,17 @@ export async function POST(req: Request) {
   if (existing) return Err.conflict('该邮箱已注册')
 
   const passwordHash = await bcrypt.hash(password, 12)
-  await prisma.user.create({
-    data: { name, email, passwordHash, emailVerified: new Date() },
-  })
+  try {
+    await prisma.user.create({
+      data: { name, email, passwordHash, emailVerified: new Date() },
+    })
+  } catch (error) {
+    if (isUniqueConstraintError(error, 'email')) {
+      return Err.conflict('该邮箱已注册')
+    }
+
+    throw error
+  }
 
   return R.noData()
 }

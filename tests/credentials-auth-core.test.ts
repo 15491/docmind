@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { authorizeCredentialsWithDeps } from '../src/lib/credentials-auth-core.ts'
+import {
+  authorizeCredentialsWithDeps,
+  authorizeCredentialsWithRateLimitDeps,
+} from '../src/lib/credentials-auth-core.ts'
 
 test('authorizeCredentialsWithDeps 会先标准化邮箱再查找用户', async () => {
   const calls: string[] = []
@@ -55,4 +58,23 @@ test('authorizeCredentialsWithDeps 对仅 OAuth 账户返回 oauth_only', async 
   )
 
   assert.equal(result, 'oauth_only')
+})
+
+test('authorizeCredentialsWithRateLimitDeps 在限流时直接返回 rate_limited', async () => {
+  const request = new Request('http://localhost/api/auth/callback/credentials')
+  const result = await authorizeCredentialsWithRateLimitDeps(
+    { email: 'user@example.com', password: 'secret-123' },
+    request,
+    {
+      limitSignInAttempt: async () => ({ ok: false }),
+      comparePassword: async () => {
+        throw new Error('should not compare password')
+      },
+      findUserByEmail: async () => {
+        throw new Error('should not query user')
+      },
+    }
+  )
+
+  assert.equal(result, 'rate_limited')
 })

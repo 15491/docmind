@@ -17,13 +17,9 @@ export interface AuthorizedCredentialsUser {
 
 export type CredentialsAuthResult = AuthorizedCredentialsUser | 'oauth_only' | null
 
-export async function authorizeCredentialsWithDeps(
-  credentials: Partial<Record<'email' | 'password', unknown>> | undefined,
-  deps: {
-    comparePassword: (password: string, passwordHash: string) => boolean | Promise<boolean>
-    findUserByEmail: (email: string) => Promise<CredentialsAuthUserRecord | null>
-  }
-): Promise<CredentialsAuthResult> {
+function parseCredentials(
+  credentials: Partial<Record<'email' | 'password', unknown>> | undefined
+) {
   const email = typeof credentials?.email === 'string'
     ? normalizeEmailAddress(credentials.email)
     : ''
@@ -35,7 +31,17 @@ export async function authorizeCredentialsWithDeps(
     return null
   }
 
-  const user = await deps.findUserByEmail(email)
+  return { email, password }
+}
+
+async function authorizeParsedCredentials(
+  input: { email: string; password: string },
+  deps: {
+    comparePassword: (password: string, passwordHash: string) => boolean | Promise<boolean>
+    findUserByEmail: (email: string) => Promise<CredentialsAuthUserRecord | null>
+  }
+): Promise<CredentialsAuthResult> {
+  const user = await deps.findUserByEmail(input.email)
   if (!user) {
     return null
   }
@@ -44,7 +50,7 @@ export async function authorizeCredentialsWithDeps(
     return 'oauth_only'
   }
 
-  const valid = await deps.comparePassword(password, user.passwordHash)
+  const valid = await deps.comparePassword(input.password, user.passwordHash)
   if (!valid) {
     return null
   }
@@ -55,4 +61,41 @@ export async function authorizeCredentialsWithDeps(
     name: user.name,
     image: user.image,
   }
+}
+
+export async function authorizeCredentialsWithDeps(
+  credentials: Partial<Record<'email' | 'password', unknown>> | undefined,
+  deps: {
+    comparePassword: (password: string, passwordHash: string) => boolean | Promise<boolean>
+    findUserByEmail: (email: string) => Promise<CredentialsAuthUserRecord | null>
+  }
+): Promise<CredentialsAuthResult> {
+  const parsed = parseCredentials(credentials)
+  if (!parsed) {
+    return null
+  }
+
+  return authorizeParsedCredentials(parsed, deps)
+}
+
+export async function authorizeCredentialsWithRateLimitDeps(
+  credentials: Partial<Record<'email' | 'password', unknown>> | undefined,
+  request: Request,
+  deps: {
+    limitSignInAttempt: (request: Request, email: string) => Promise<{ ok: boolean }>
+    comparePassword: (password: string, passwordHash: string) => boolean | Promise<boolean>
+    findUserByEmail: (email: string) => Promise<CredentialsAuthUserRecord | null>
+  }
+): Promise<CredentialsAuthResult | 'rate_limited'> {
+  const parsed = parseCredentials(credentials)
+  if (!parsed) {
+    return null
+  }
+
+  const { ok } = await deps.limitSignInAttempt(request, parsed.email)
+  if (!ok) {
+    return 'rate_limited'
+  }
+
+  return authorizeParsedCredentials(parsed, deps)
 }
