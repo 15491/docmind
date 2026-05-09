@@ -45,10 +45,18 @@ type EnqueuedJob = {
   id?: string | null
 }
 
+function duplicateDocumentConflict(document: ExistingDocument): Response {
+  if (document.status === 'ready') return Err.conflict(`文件已上传过，ID: ${document.id}`)
+  if (document.status === 'failed') return Err.conflict(`文件之前上传失败，请重试该文档：${document.id}`)
+  if (document.status === 'processing') return Err.conflict('文件正在处理中，请稍后')
+  return Err.conflict(`文件已存在，ID: ${document.id}`)
+}
+
 export interface UploadRouteDeps {
   rateLimit: (key: string, maxRequests: number, windowSeconds: number) => Promise<RateLimitResult>
   findKnowledgeBase: (kbId: string) => Promise<UploadKnowledgeBase | null>
   findExistingDocument: (knowledgeBaseId: string, contentHash: string) => Promise<ExistingDocument | null>
+  isDuplicateDocumentError?: (error: unknown) => boolean
   createDocument: (input: {
     fileName: string
     fileSize: number
@@ -98,19 +106,31 @@ export async function handleUploadDocument(
     const existingDoc = await deps.findExistingDocument(body.kbId, contentHash)
 
     if (existingDoc) {
-      if (existingDoc.status === 'ready') return Err.conflict(`文件已上传过，ID: ${existingDoc.id}`)
-      if (existingDoc.status === 'failed') return Err.conflict(`文件之前上传失败，请重试该文档：${existingDoc.id}`)
-      if (existingDoc.status === 'processing') return Err.conflict('文件正在处理中，请稍后')
+      return duplicateDocumentConflict(existingDoc)
     }
 
-    const document = await deps.createDocument({
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type,
-      status: 'processing',
-      contentHash,
-      knowledgeBaseId: body.kbId,
-    })
+    let document: CreatedDocument
+
+    try {
+      document = await deps.createDocument({
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        status: 'processing',
+        contentHash,
+        knowledgeBaseId: body.kbId,
+      })
+    } catch (error) {
+      if (deps.isDuplicateDocumentError?.(error)) {
+        const duplicateDoc = await deps.findExistingDocument(body.kbId, contentHash)
+        if (duplicateDoc) {
+          return duplicateDocumentConflict(duplicateDoc)
+        }
+      }
+
+      throw error
+    }
+
     createdDocumentId = document.id
 
     const objectKey = `documents/${document.id}/${file.name}`

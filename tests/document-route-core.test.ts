@@ -124,6 +124,59 @@ test('handleUploadDocument returns conflict for processing duplicate documents',
   assert.equal(payload.message, '文件正在处理中，请稍后')
 })
 
+test('handleUploadDocument returns conflict when createDocument hits duplicate constraint', async () => {
+  const formData = new FormData()
+  formData.set('kbId', 'cmuploadaaaaaaaaaaaaaaaaaa')
+  formData.set('file', new File(['hello'], 'demo.md', { type: 'text/markdown' }))
+
+  const duplicateError = new Error('duplicate document')
+  let lookupCount = 0
+
+  const response = await handleUploadDocument(
+    new Request('http://localhost/api/upload', { method: 'POST', body: formData }),
+    'user-1',
+    {
+      rateLimit: async () => ({ ok: true }),
+      findKnowledgeBase: async () => ({ userId: 'user-1' }),
+      findExistingDocument: async () => {
+        lookupCount += 1
+        return lookupCount === 1
+          ? null
+          : { id: 'doc-existing', status: 'processing' }
+      },
+      isDuplicateDocumentError: (error) => error === duplicateError,
+      createDocument: async () => {
+        throw duplicateError
+      },
+      uploadObject: async () => {
+        throw new Error('should not upload object')
+      },
+      setDocumentStorageKey: async () => {
+        throw new Error('should not update storage key')
+      },
+      deleteObject: async () => {
+        throw new Error('should not delete object')
+      },
+      deleteDocumentRecord: async () => {
+        throw new Error('should not delete record')
+      },
+      updateDocumentStatus: async () => {
+        throw new Error('should not update status')
+      },
+      enqueueDocumentJob: async () => {
+        throw new Error('should not enqueue job')
+      },
+    }
+  )
+
+  assert.equal(response.status, 409)
+  assert.equal(lookupCount, 2)
+
+  const payload = await response.json()
+  assert.equal(payload.code, 'CONFLICT')
+  assert.equal(payload.message, '文件正在处理中，请稍后')
+})
+
 test('handleUploadDocument rolls back to failed when enqueueing fails', async () => {
   const calls: string[] = []
   const originalConsoleError = console.error

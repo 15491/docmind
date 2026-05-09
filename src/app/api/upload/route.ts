@@ -1,4 +1,5 @@
 import { deleteFile, uploadFile } from '@/lib/minio'
+import { isUniqueConstraintError } from '@/lib/prisma-errors'
 import { prisma } from '@/lib/prisma'
 import { enqueueDocumentJob } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
@@ -11,10 +12,16 @@ const uploadRouteDeps = {
     where: { id: kbId },
     select: { userId: true },
   }),
-  findExistingDocument: (knowledgeBaseId: string, contentHash: string) => prisma.document.findFirst({
-    where: { knowledgeBaseId, contentHash },
+  findExistingDocument: (knowledgeBaseId: string, contentHash: string) => prisma.document.findUnique({
+    where: {
+      unique_doc_per_kb: {
+        knowledgeBaseId,
+        contentHash,
+      },
+    },
     select: { id: true, status: true },
   }),
+  isDuplicateDocumentError: (error: unknown) => isUniqueConstraintError(error, ['knowledgeBaseId', 'contentHash']),
   createDocument: (input: {
     fileName: string
     fileSize: number
