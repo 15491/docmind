@@ -11,10 +11,6 @@ type HeaderCarrier = {
 
 export { buildRateLimitKey, getClientIp, normalizeEmailAddress } from './auth-rate-limit-core'
 
-export async function limitCheckEmailRequest(req: HeaderCarrier) {
-  return rateLimit(buildRateLimitKey('rl:check-email:ip', getClientIp(req)), 20, 60)
-}
-
 export async function limitSendCodeRequest(
   req: HeaderCarrier,
   email: string,

@@ -138,6 +138,12 @@ test('changePasswordSchema 拒绝短新密码', () => {
   )
 })
 
+test('changePasswordSchema 允许缺省 oldPassword 以支持首次设置密码', () => {
+  const result = changePasswordSchema.parse({ newPassword: '12345678' })
+
+  assert.deepEqual(result, { newPassword: '12345678' })
+})
+
 test('updateUserSchema 拒绝空 payload，并对字符串做 trim', () => {
   assert.throws(() => updateUserSchema.parse({}), /无可更新字段/)
 

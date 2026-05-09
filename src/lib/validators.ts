@@ -45,10 +45,6 @@ function optionalBoundedNumber(
   return z.preprocess(parseOptionalNumber, schema.optional())
 }
 
-export const authCheckEmailSchema = z.object({
-  email: emailSchema,
-})
-
 export const registerSchema = z.object({
   name: z.string().trim().min(1, '请输入昵称'),
   email: emailSchema,
@@ -126,7 +122,7 @@ export const changeEmailSchema = z.object({
 })
 
 export const changePasswordSchema = z.object({
-  oldPassword: z.string().min(1, '请输入当前密码'),
+  oldPassword: z.string().min(1, '请输入当前密码').optional(),
   newPassword: z.string().min(8, '新密码至少 8 位'),
 })
 

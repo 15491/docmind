@@ -76,3 +76,60 @@ test('changePasswordWithDeps revokes existing sessions after updating the passwo
     'revoke:user-1',
   ])
 })
+
+test('changePasswordWithDeps allows OAuth-only users to set a password', async () => {
+  const calls: string[] = []
+
+  const response = await changePasswordWithDeps(
+    'user-2',
+    { newPassword: 'new-password' },
+    {
+      findUserById: async (userId) => {
+        calls.push(`find:${userId}`)
+        return { passwordHash: null }
+      },
+      comparePassword: async (password, passwordHash) => {
+        calls.push(`compare:${password}:${passwordHash}`)
+        return true
+      },
+      hashPassword: async (password) => {
+        calls.push(`hash:${password}`)
+        return 'new-hash'
+      },
+      updatePasswordByUserId: async (userId, passwordHash) => {
+        calls.push(`update:${userId}:${passwordHash}`)
+      },
+      revokeAllSessions: async (userId) => {
+        calls.push(`revoke:${userId}`)
+      },
+    }
+  )
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls, [
+    'find:user-2',
+    'hash:new-password',
+    'update:user-2:new-hash',
+    'revoke:user-2',
+  ])
+})
+
+test('changePasswordWithDeps requires oldPassword when the user already has a password', async () => {
+  const response = await changePasswordWithDeps(
+    'user-3',
+    { newPassword: 'new-password' },
+    {
+      findUserById: async () => ({ passwordHash: 'old-hash' }),
+      comparePassword: async () => true,
+      hashPassword: async () => 'new-hash',
+      updatePasswordByUserId: async () => undefined,
+      revokeAllSessions: async () => undefined,
+    }
+  )
+
+  assert.equal(response.status, 422)
+
+  const payload = await response.json()
+  assert.equal(payload.ok, false)
+  assert.equal(payload.message, '请输入当前密码')
+})

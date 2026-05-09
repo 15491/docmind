@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { signOut } from "next-auth/react"
+import { signIn, signOut } from "next-auth/react"
 import { toast } from "sonner"
 import { http, ApiError } from "@/lib/request"
 
@@ -10,14 +10,19 @@ const LS_RAG = "docmind:rag-config"
 export function useProfileForm() {
   const [nickname, setNickname] = useState("")
   const [email, setEmail] = useState("")
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null)
+  const [hasGithubAccount, setHasGithubAccount] = useState(false)
+  const [isLinkingGithub, setIsLinkingGithub] = useState(false)
   const [oldPwd, setOldPwd] = useState("")
   const [newPwd, setNewPwd] = useState("")
 
   useEffect(() => {
-    http.get<{ user: { name?: string; email?: string } }>("/api/user")
+    http.get<{ user: { name?: string; email?: string; hasPassword?: boolean; providers?: string[] } }>("/api/user")
       .then((data) => {
         setNickname(data.user.name ?? "")
         setEmail(data.user.email ?? "")
+        setHasPassword(Boolean(data.user.hasPassword))
+        setHasGithubAccount((data.user.providers ?? []).includes("github"))
       })
       .catch(() => {})
   }, [])
@@ -36,16 +41,38 @@ export function useProfileForm() {
       )
     }
 
-    if (oldPwd && newPwd) {
+    const isUpdatingPassword = Boolean(oldPwd || newPwd)
+    if (isUpdatingPassword) {
+      if (hasPassword === null) {
+        const error = new Error("账户信息加载中，请稍后重试")
+        toast.error(error.message)
+        throw error
+      }
+
+      if (!newPwd) {
+        const error = new Error(hasPassword ? "请输入新密码" : "请输入登录密码")
+        toast.error(error.message)
+        throw error
+      }
+
+      if (hasPassword && !oldPwd) {
+        const error = new Error("请输入当前密码")
+        toast.error(error.message)
+        throw error
+      }
+
       shouldSignOutAfterSave = true
       tasks.push(
-        http.patch("/api/user/password", { oldPassword: oldPwd, newPassword: newPwd })
+        http.patch("/api/user/password", hasPassword
+          ? { oldPassword: oldPwd, newPassword: newPwd }
+          : { newPassword: newPwd })
           .then(() => {
             setOldPwd("")
             setNewPwd("")
+            setHasPassword(true)
           })
           .catch((err) => {
-            throw new Error(err instanceof ApiError ? err.message : "密码修改失败")
+            throw new Error(err instanceof ApiError ? err.message : hasPassword ? "密码修改失败" : "密码设置失败")
           })
       )
     }
@@ -66,7 +93,30 @@ export function useProfileForm() {
     toast.success("保存成功")
   }
 
-  return { nickname, setNickname, email, setEmail, oldPwd, setOldPwd, newPwd, setNewPwd, handleSave }
+  const handleGithubLink = async () => {
+    setIsLinkingGithub(true)
+    try {
+      await signIn("github", { redirectTo: "/dashboard/settings" })
+    } finally {
+      setIsLinkingGithub(false)
+    }
+  }
+
+  return {
+    nickname,
+    setNickname,
+    email,
+    setEmail,
+    hasPassword,
+    hasGithubAccount,
+    isLinkingGithub,
+    oldPwd,
+    setOldPwd,
+    newPwd,
+    setNewPwd,
+    handleSave,
+    handleGithubLink,
+  }
 }
 
 export function useEmailChange() {

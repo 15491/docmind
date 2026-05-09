@@ -6,9 +6,27 @@ import { SaveButton, FieldRow, TextInput, MaskInput, RangeInput } from "./form"
 import { useProfileForm, useEmailChange, useApiForm, useRagConfig, useDangerZone } from "./hooks"
 
 export function ProfileSection() {
-  const { nickname, setNickname, email, oldPwd, setOldPwd, newPwd, setNewPwd, handleSave } = useProfileForm()
+  const {
+    nickname,
+    setNickname,
+    email,
+    hasPassword,
+    hasGithubAccount,
+    isLinkingGithub,
+    oldPwd,
+    setOldPwd,
+    newPwd,
+    setNewPwd,
+    handleSave,
+    handleGithubLink,
+  } = useProfileForm()
   const [showEmailChange, setShowEmailChange] = useState(false)
   const { newEmail, setNewEmail, code, setCode, step, sending, saving, error: emailError, countdown, sendCode, confirmChange } = useEmailChange()
+  const passwordSectionTitle = hasPassword === false ? "设置登录密码" : "修改密码"
+  const passwordSectionHint = hasPassword === false
+    ? "设置后可直接使用邮箱和密码登录"
+    : "更新后需要重新登录"
+  const passwordStatusLabel = hasPassword === null ? "读取中" : hasPassword ? "已启用" : "未设置"
 
   return (
     <div>
@@ -34,6 +52,41 @@ export function ProfileSection() {
                   className="flex-shrink-0 text-[11.5px] font-medium text-zinc-500 hover:text-zinc-800 underline underline-offset-2 transition-colors"
                 >
                   修改
+                </button>
+              )}
+            </div>
+          </FieldRow>
+          <FieldRow label="登录方式" hint="可同时启用邮箱密码和 GitHub 登录">
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12px] font-medium ${
+                  hasPassword
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-zinc-100 text-zinc-600"
+                }`}>
+                  邮箱密码 {passwordStatusLabel}
+                </span>
+                <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12px] font-medium ${
+                  hasGithubAccount
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-zinc-100 text-zinc-600"
+                }`}>
+                  GitHub {hasGithubAccount ? "已绑定" : "未绑定"}
+                </span>
+              </div>
+              <p className="text-[12px] leading-relaxed text-[#62636b]">
+                {hasGithubAccount
+                  ? "当前账号已绑定 GitHub。设置邮箱密码后，你可以自由选择 GitHub 或邮箱密码登录。"
+                  : "当前账号还没有绑定 GitHub。绑定后可直接使用 GitHub 登录，也能与邮箱密码并存。"}
+              </p>
+              {!hasGithubAccount && (
+                <button
+                  type="button"
+                  onClick={handleGithubLink}
+                  disabled={isLinkingGithub}
+                  className="h-9 rounded-[8px] border border-[#e2e2e8] bg-white px-3.5 text-[12px] font-medium text-[#35353d] transition-colors hover:bg-[#f7f7f8] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {isLinkingGithub ? "跳转中…" : "绑定 GitHub"}
                 </button>
               )}
             </div>
@@ -95,13 +148,15 @@ export function ProfileSection() {
         </div>
       </div>
       <div className="mb-6">
-        <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider mb-3">修改密码</p>
+        <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider mb-3">{passwordSectionTitle}</p>
         <div className="bg-white border border-[#ebebed] rounded-[10px] px-5">
-          <FieldRow label="当前密码">
-            <MaskInput value={oldPwd} onChange={setOldPwd} placeholder="输入当前密码" />
-          </FieldRow>
-          <FieldRow label="新密码" hint="至少 8 位">
-            <MaskInput value={newPwd} onChange={setNewPwd} placeholder="输入新密码" />
+          {hasPassword !== false && (
+            <FieldRow label="当前密码">
+              <MaskInput value={oldPwd} onChange={setOldPwd} placeholder="输入当前密码" />
+            </FieldRow>
+          )}
+          <FieldRow label={hasPassword === false ? "登录密码" : "新密码"} hint={passwordSectionHint}>
+            <MaskInput value={newPwd} onChange={setNewPwd} placeholder={hasPassword === false ? "输入要设置的密码" : "输入新密码"} />
           </FieldRow>
         </div>
       </div>

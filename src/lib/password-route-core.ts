@@ -1,3 +1,4 @@
+import { THIRD_PARTY_PASSWORD_SETUP_MESSAGE } from './auth-messages'
 import { Err, R } from './response'
 
 type VerifyCodeResult = { ok: true } | { ok: false; error: string }
@@ -27,7 +28,7 @@ export async function resetPasswordWithDeps(
 
   const user = await deps.findUserByEmail(input.email)
   if (!user) return Err.notFound('账号不存在')
-  if (!user.passwordHash) return Err.invalid('该账号通过第三方登录，无法设置密码')
+  if (!user.passwordHash) return Err.invalid(THIRD_PARTY_PASSWORD_SETUP_MESSAGE)
 
   const passwordHash = await deps.hashPassword(input.newPassword)
   await deps.updatePasswordByEmail(input.email, passwordHash)
@@ -38,14 +39,18 @@ export async function resetPasswordWithDeps(
 
 export async function changePasswordWithDeps(
   userId: string,
-  input: { oldPassword: string; newPassword: string },
+  input: { oldPassword?: string; newPassword: string },
   deps: ChangePasswordDeps
 ): Promise<Response> {
   const user = await deps.findUserById(userId)
-  if (!user?.passwordHash) return Err.invalid('该账号通过第三方登录，无法修改密码')
+  if (!user) return Err.notFound('用户不存在')
 
-  const valid = await deps.comparePassword(input.oldPassword, user.passwordHash)
-  if (!valid) return Err.invalid('当前密码不正确')
+  if (user.passwordHash) {
+    if (!input.oldPassword) return Err.invalid('请输入当前密码')
+
+    const valid = await deps.comparePassword(input.oldPassword, user.passwordHash)
+    if (!valid) return Err.invalid('当前密码不正确')
+  }
 
   const passwordHash = await deps.hashPassword(input.newPassword)
   await deps.updatePasswordByUserId(userId, passwordHash)
