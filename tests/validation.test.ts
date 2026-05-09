@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { z } from 'zod'
+import { getCreatedAtDescCursorOrderBy } from '../src/lib/cursor-pagination.ts'
 import * as validation from '../src/lib/validate-request.ts'
 import * as validators from '../src/lib/validators.ts'
 
@@ -122,6 +123,13 @@ test('documentsStatusQuerySchema 解析 limit 并保留 cursor', () => {
     cursor: 'cmbbbbbbbbbbbbbbbbbbbbbb',
     limit: 10,
   })
+})
+
+test('getCreatedAtDescCursorOrderBy 为 cursor 分页提供稳定排序', () => {
+  assert.deepEqual(getCreatedAtDescCursorOrderBy(), [
+    { createdAt: 'desc' },
+    { id: 'desc' },
+  ])
 })
 
 test('batchDeleteDocumentsSchema 要求非空数组', () => {

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getCreatedAtDescCursorOrderBy } from '@/lib/cursor-pagination'
 import { listSessionsByKnowledgeBase } from '@/lib/session-route-core'
 import { withAuth } from '@/lib/with-auth'
 
@@ -10,7 +11,7 @@ const sessionListDeps = {
   findSessions: (input: { kbId: string; cursor?: string; limit: number }) => prisma.chatSession.findMany({
     where: { knowledgeBaseId: input.kbId },
     include: { _count: { select: { messages: true } } },
-    orderBy: { createdAt: 'desc' },
+    orderBy: getCreatedAtDescCursorOrderBy(),
     take: input.limit + 1,
     ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
   }),

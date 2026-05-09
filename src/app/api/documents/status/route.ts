@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getCreatedAtDescCursorOrderBy } from '@/lib/cursor-pagination'
 import { Err, R } from '@/lib/response'
 import { isValidationErrorResponse, validateSearchParams } from '@/lib/validate-request'
 import { documentsStatusQuerySchema } from '@/lib/validators'
@@ -17,7 +18,7 @@ export const GET = withAuth(async (req, _ctx, userId) => {
     const documents = await prisma.document.findMany({
       where: { knowledgeBaseId: kbId },
       include: { _count: { select: { chunks: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: getCreatedAtDescCursorOrderBy(),
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     })
