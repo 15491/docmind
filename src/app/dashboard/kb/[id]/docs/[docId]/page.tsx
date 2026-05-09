@@ -19,6 +19,14 @@ type FileState = {
   error?: string
 }
 
+function getPreviewUrl(documentId: string) {
+  return `/api/files/${documentId}`
+}
+
+function getDownloadUrl(documentId: string) {
+  return `/api/files/${documentId}?download=1`
+}
+
 function formatFileSize(fileSize: number) {
   if (fileSize < 1024 * 1024) {
     return `${(fileSize / 1024).toFixed(1)}KB`
@@ -87,18 +95,20 @@ export default function DocumentPreviewPage({ params }: { params: Promise<{ id: 
 
       try {
         setFileState({ loading: true })
-        const { url } = await http.get<{ url: string }>(`/api/files/${doc.id}`)
-
-        if (cancelled) return
+        const url = getPreviewUrl(doc.id)
 
         if (isText) {
           const response = await fetch(url)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+          }
           const content = await response.text()
           if (cancelled) return
           setFileState({ loading: false, url, content })
           return
         }
 
+        if (cancelled) return
         setFileState({ loading: false, url })
       } catch (err) {
         if (cancelled) return
@@ -159,7 +169,7 @@ export default function DocumentPreviewPage({ params }: { params: Promise<{ id: 
                     新窗口打开
                   </a>
                   <a
-                    href={fileState.url}
+                    href={doc ? getDownloadUrl(doc.id) : undefined}
                     download={doc?.fileName}
                     className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-zinc-900 px-3.5 text-[12.5px] font-medium text-white transition-colors hover:bg-zinc-700"
                   >

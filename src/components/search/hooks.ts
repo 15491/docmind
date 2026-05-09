@@ -8,24 +8,69 @@ import { RECENT_SEARCHES } from "./constants"
 const SEARCH_HISTORY_KEY = "docmind:search-history"
 const MAX_RECENT_SEARCHES = 6
 const searchHistoryListeners = new Set<() => void>()
+const DEFAULT_RECENT_SEARCHES = dedupeRecentSearches(RECENT_SEARCHES)
+
+let cachedSearchHistoryRaw: string | null | undefined
+let cachedSearchHistorySnapshot: string[] = []
 
 function dedupeRecentSearches(items: string[]) {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean))).slice(0, MAX_RECENT_SEARCHES)
 }
 
+function parseStoredRecentSearches(raw: string | null): string[] | null {
+  if (raw === null) {
+    return null
+  }
+
+  const parsed = JSON.parse(raw) as unknown
+  if (!Array.isArray(parsed)) {
+    return null
+  }
+
+  return dedupeRecentSearches(parsed.filter((item): item is string => typeof item === "string"))
+}
+
 function getStoredRecentSearches() {
   if (typeof window === "undefined") {
-    return RECENT_SEARCHES
+    return cachedSearchHistorySnapshot
   }
 
   try {
     const stored = window.localStorage.getItem(SEARCH_HISTORY_KEY)
-    if (!stored) return RECENT_SEARCHES
+    if (stored === cachedSearchHistoryRaw) {
+      return cachedSearchHistorySnapshot
+    }
 
-    const parsed = JSON.parse(stored) as string[]
-    return dedupeRecentSearches([...parsed, ...RECENT_SEARCHES])
+    cachedSearchHistoryRaw = stored
+    cachedSearchHistorySnapshot = parseStoredRecentSearches(stored) ?? []
+    return cachedSearchHistorySnapshot
   } catch {
-    return RECENT_SEARCHES
+    cachedSearchHistoryRaw = null
+    cachedSearchHistorySnapshot = []
+    return cachedSearchHistorySnapshot
+  }
+}
+
+function writeStoredRecentSearches(items: string[]) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  const nextRecentSearches = dedupeRecentSearches(items)
+  const nextRaw = nextRecentSearches.length > 0 ? JSON.stringify(nextRecentSearches) : null
+
+  try {
+    if (nextRaw) {
+      window.localStorage.setItem(SEARCH_HISTORY_KEY, nextRaw)
+    } else {
+      window.localStorage.removeItem(SEARCH_HISTORY_KEY)
+    }
+
+    cachedSearchHistoryRaw = nextRaw
+    cachedSearchHistorySnapshot = nextRecentSearches
+    emitSearchHistoryChange()
+  } catch {
+    // 忽略存储失败，保持搜索流程可用
   }
 }
 
@@ -42,6 +87,8 @@ function subscribeSearchHistory(onStoreChange: () => void) {
 
   const handleStorage = (event: StorageEvent) => {
     if (event.key === SEARCH_HISTORY_KEY) {
+      cachedSearchHistoryRaw = event.newValue
+      cachedSearchHistorySnapshot = parseStoredRecentSearches(event.newValue) ?? []
       onStoreChange()
     }
   }
@@ -64,19 +111,20 @@ export function useSearch() {
   const recentSearches = useSyncExternalStore(
     subscribeSearchHistory,
     getStoredRecentSearches,
-    () => RECENT_SEARCHES
+    () => []
   )
 
   const rememberSearch = useCallback((keyword: string) => {
-    const nextRecentSearches = dedupeRecentSearches([keyword, ...recentSearches])
-
-    try {
-      window.localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(nextRecentSearches))
-      emitSearchHistoryChange()
-    } catch {
-      // 忽略存储失败，保持搜索流程可用
-    }
+    writeStoredRecentSearches([keyword, ...recentSearches])
   }, [recentSearches])
+
+  const removeRecentSearch = useCallback((keyword: string) => {
+    writeStoredRecentSearches(recentSearches.filter((item) => item !== keyword))
+  }, [recentSearches])
+
+  const clearRecentSearches = useCallback(() => {
+    writeStoredRecentSearches([])
+  }, [])
 
   const handleSearch = useCallback(async (nextQuery = query) => {
     const keyword = nextQuery.trim()
@@ -100,5 +148,17 @@ export function useSearch() {
     }
   }, [query, rememberSearch])
 
-  return { query, setQuery, results, searched, loading, error, recentSearches, handleSearch }
+  return {
+    query,
+    setQuery,
+    results,
+    searched,
+    loading,
+    error,
+    recentSearches,
+    suggestedSearches: DEFAULT_RECENT_SEARCHES,
+    handleSearch,
+    removeRecentSearch,
+    clearRecentSearches,
+  }
 }

@@ -25,10 +25,19 @@ export async function uploadFile(
   }
 }
 
+export async function getFileStream(objectKey: string) {
+  try {
+    return await minioClient.getObject(BUCKET, objectKey)
+  } catch (error) {
+    console.error('[MinIO] Stream open failed:', error)
+    throw error
+  }
+}
+
 export async function downloadFile(objectKey: string): Promise<Buffer> {
   try {
     const chunks: Buffer[] = []
-    const stream = await minioClient.getObject(BUCKET, objectKey)
+    const stream = await getFileStream(objectKey)
 
     return new Promise((resolve, reject) => {
       stream.on('data', (chunk) => {

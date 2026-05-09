@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpen, ChevronRight, FileSearch, FileText, MessageSquare, Search } from "lucide-react"
+import { BookOpen, ChevronRight, FileSearch, FileText, MessageSquare, Search, X } from "lucide-react"
 import { ScoreBadge } from "./components"
 import { useSearch } from "./hooks"
 import type { SearchResult } from "./types"
@@ -30,7 +30,19 @@ export function SearchWorkspace({
 }: SearchWorkspaceProps) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
-  const { query, setQuery, results, searched, loading, error, recentSearches, handleSearch } = useSearch()
+  const {
+    query,
+    setQuery,
+    results,
+    searched,
+    loading,
+    error,
+    recentSearches,
+    suggestedSearches,
+    handleSearch,
+    removeRecentSearch,
+    clearRecentSearches,
+  } = useSearch()
 
   useEffect(() => {
     if (!autoFocus) return
@@ -74,7 +86,7 @@ export function SearchWorkspace({
           <p className="mt-2 text-[13px] leading-6 text-[#8a8b93]">
             默认先定位命中文档，再决定是否进入对话。这样比直接跳聊天更稳定，也更容易核对原文。
           </p>
-          <p className="mt-3 text-[12px] text-[#aaabb2]">你也可以随时按 Ctrl + K / ⌘ + K 呼出快捷搜索。</p>
+          <p className="mt-3 text-[12px] text-[#aaabb2]">你也可以随时按 Ctrl + K / ⌘ + K 唤出快捷搜索。</p>
         </div>
       )}
 
@@ -121,9 +133,48 @@ export function SearchWorkspace({
 
           {!searched && !loading && recentSearches.length > 0 && (
             <div className="mt-4">
-              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-[#c0c0c8]">最近搜索</p>
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c0c0c8]">最近搜索</p>
+                <button
+                  type="button"
+                  onClick={clearRecentSearches}
+                  className="text-[11px] font-medium text-[#aaabb2] transition-colors hover:text-[#62636b]"
+                >
+                  清空
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {recentSearches.map((item) => (
+                  <div
+                    key={item}
+                    className="inline-flex h-8 items-center rounded-full border border-[#e8e8ec] bg-white pr-1 text-[12px] text-[#62636b] transition-all hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-800"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => void handleSearch(item)}
+                      className="h-full rounded-full px-3 text-left"
+                    >
+                      {item}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`删除最近搜索 ${item}`}
+                      onClick={() => removeRecentSearch(item)}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[#b1b2ba] transition-colors hover:bg-[#f1f1f4] hover:text-[#62636b]"
+                    >
+                      <X size={12} strokeWidth={2.2} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!searched && !loading && recentSearches.length === 0 && suggestedSearches.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-[#c0c0c8]">推荐搜索</p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestedSearches.map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -145,7 +196,7 @@ export function SearchWorkspace({
                 {[0, 1, 2].map((index) => (
                   <span
                     key={index}
-                    className="h-1.5 w-1.5 rounded-full bg-zinc-300 animate-bounce"
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-300"
                     style={{ animationDelay: `${index * 0.15}s` }}
                   />
                 ))}
