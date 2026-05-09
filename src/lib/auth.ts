@@ -10,6 +10,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
 import { authConfig } from "./auth.config"
+import { authorizeCredentialsWithDeps } from "./credentials-auth-core"
 import { createSessionVersion, getSessionVersion } from "./session-version"
 
 declare module "next-auth" {
@@ -36,18 +37,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string | undefined
-        const password = credentials?.password as string | undefined
-        if (!email || !password) return null
+        const result = await authorizeCredentialsWithDeps(credentials, {
+          comparePassword: bcrypt.compare,
+          findUserByEmail: (email) => prisma.user.findUnique({ where: { email } }),
+        })
 
-        const user = await prisma.user.findUnique({ where: { email } })
-        if (!user) return null
-        if (!user.passwordHash) throw new OAuthOnlyAccount()
+        if (result === 'oauth_only') {
+          throw new OAuthOnlyAccount()
+        }
 
-        const valid = await bcrypt.compare(password, user.passwordHash)
-        if (!valid) return null
-
-        return { id: user.id, name: user.name, email: user.email, image: user.image }
+        return result
       },
     }),
   ],

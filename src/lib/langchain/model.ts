@@ -1,6 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 import type { BaseMessageLike } from '@langchain/core/messages'
+import { getZhipuBaseUrl } from '@/lib/zhipu-config'
 
 export interface HistoryMessage {
   role: 'user' | 'assistant'
@@ -14,7 +15,6 @@ interface BuildMessagesOptions {
   toolResult?: { id: string; content: string }
 }
 
-const DEFAULT_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4'
 const DEFAULT_MODEL = 'glm-4-flash'
 
 function getApiKey(apiKey?: string | null): string {
@@ -37,7 +37,7 @@ export function getChatModel(props?: {
     temperature,
     maxTokens,
     configuration: {
-      baseURL: process.env.ZHIPU_BASE_URL?.trim() || DEFAULT_BASE_URL,
+      baseURL: getZhipuBaseUrl(),
     },
   })
 }

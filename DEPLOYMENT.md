@@ -66,7 +66,7 @@ cp .env.example .env.local
 - `EMAIL_FROM`
 - `TAVILY_API_KEY`（可选）
 
-如果你使用智谱 OpenAI 兼容地址，也可以加上：
+如果你需要走代理或兼容网关，也可以加上：
 
 ```env
 ZHIPU_BASE_URL="https://open.bigmodel.cn/api/paas/v4"

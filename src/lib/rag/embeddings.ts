@@ -1,4 +1,5 @@
 import { searchChunks as searchEsChunks } from '@/lib/elasticsearch'
+import { buildZhipuUrl } from '@/lib/zhipu-config'
 
 // 调用智谱AI Embedding API，获取文本向量
 export async function embedText(text: string, apiKey?: string | null): Promise<number[]> {
@@ -15,7 +16,7 @@ export async function embedText(text: string, apiKey?: string | null): Promise<n
   console.log(`[EMBED] Calling Zhipu embed: textLen=${text.length}, trimLen=${text.trim().length}, first80=${JSON.stringify(text.slice(0, 80))}`)
   console.log(`[EMBED] Request body: ${JSON.stringify(requestBody).slice(0, 300)}`)
 
-  const response = await fetch('https://open.bigmodel.cn/api/paas/v4/embeddings', {
+  const response = await fetch(buildZhipuUrl('/embeddings'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

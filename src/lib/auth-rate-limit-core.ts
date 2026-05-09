@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+export { normalizeEmailAddress } from './email'
 
 type HeaderCarrier = {
   headers: Pick<Headers, 'get'>
@@ -6,10 +7,6 @@ type HeaderCarrier = {
 
 function hashIdentifier(value: string): string {
   return createHash('sha256').update(value).digest('hex').slice(0, 24)
-}
-
-export function normalizeEmailAddress(email: string): string {
-  return email.trim().toLowerCase()
 }
 
 export function getClientIp(req: HeaderCarrier): string {

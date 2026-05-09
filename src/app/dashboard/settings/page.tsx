@@ -20,36 +20,45 @@ export default function SettingsPage() {
         ]}
       />
 
-      <PageContent width="3xl">
-        <div className="mb-6">
-          <h1 className="text-[18px] font-semibold tracking-tight text-[#0f0f10]">设置</h1>
-          <p className="mt-1 text-[12.5px] text-[#8a8b93]">管理个人资料、API 配置和 RAG 参数。</p>
-        </div>
+      <PageContent width="full">
+        <div className="max-w-[1200px]">
+          <div className="mb-7 max-w-[520px]">
+            <h1 className="text-[20px] font-semibold tracking-tight text-[#0f0f10]">设置</h1>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#8a8b93]">
+              管理个人资料、模型密钥与检索参数。常用内容固定在左侧，编辑区域保持靠左展开。
+            </p>
+          </div>
 
-        <div className="flex gap-8">
-          <nav className="w-[160px] flex-shrink-0 space-y-0.5">
-            {SECTIONS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActive(id)}
-                className={`flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-[13px] font-medium transition-all ${
-                  active === id
-                    ? "bg-zinc-900 text-white"
-                    : "text-[#55555e] hover:bg-[#f3f3f5] hover:text-[#0f0f10]"
-                }`}
-              >
-                <Icon size={14} strokeWidth={active === id ? 2.2 : 1.8} />
-                {label}
-              </button>
-            ))}
-          </nav>
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-10">
+            <nav className="w-full flex-shrink-0 rounded-[14px] border border-[#ededf1] bg-[#fcfcfd] p-2 xl:sticky xl:top-6 xl:w-[190px]">
+              <div className="mb-2 px-2.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#c0c0c8]">
+                设置分组
+              </div>
+              <div className="space-y-1">
+                {SECTIONS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setActive(id)}
+                    className={`flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[13px] font-medium transition-all ${
+                      active === id
+                        ? "bg-zinc-900 text-white shadow-[0_8px_24px_rgba(15,15,16,0.12)]"
+                        : "text-[#55555e] hover:bg-white hover:text-[#0f0f10]"
+                    }`}
+                  >
+                    <Icon size={14} strokeWidth={active === id ? 2.2 : 1.8} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </nav>
 
-          <div className="min-w-0 flex-1">
-            {active === "profile" && <ProfileSection key="profile" />}
-            {active === "api" && <ApiSection key="api" />}
-            {active === "rag" && <RagSection key="rag" />}
-            {active === "danger" && <DangerSection key="danger" />}
+            <div className="min-w-0 max-w-[820px] flex-1">
+              {active === "profile" && <ProfileSection key="profile" />}
+              {active === "api" && <ApiSection key="api" />}
+              {active === "rag" && <RagSection key="rag" />}
+              {active === "danger" && <DangerSection key="danger" />}
+            </div>
           </div>
         </div>
       </PageContent>

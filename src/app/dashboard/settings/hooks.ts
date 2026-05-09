@@ -24,6 +24,7 @@ export function useProfileForm() {
 
   const handleSave = async () => {
     const tasks: Promise<void>[] = []
+    let shouldSignOutAfterSave = false
 
     if (nickname.trim()) {
       tasks.push(
@@ -36,6 +37,7 @@ export function useProfileForm() {
     }
 
     if (oldPwd && newPwd) {
+      shouldSignOutAfterSave = true
       tasks.push(
         http.patch("/api/user/password", { oldPassword: oldPwd, newPassword: newPwd })
           .then(() => {
@@ -54,6 +56,13 @@ export function useProfileForm() {
       toast.error(failed[0].reason?.message ?? "保存失败")
       throw failed[0].reason
     }
+
+    if (shouldSignOutAfterSave) {
+      toast.success("密码已更新，请重新登录")
+      await signOut({ redirectTo: "/login" })
+      return
+    }
+
     toast.success("保存成功")
   }
 
@@ -113,7 +122,8 @@ export function useEmailChange() {
       await http.patch("/api/user/email", { email: newEmail, code })
       setStep("done")
       toast.success("邮箱已更新，请重新登录")
-      setTimeout(() => window.location.reload(), 1500)
+      await signOut({ redirectTo: "/login" })
+      return
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "修改失败")
     } finally {
@@ -126,7 +136,6 @@ export function useEmailChange() {
 
 export function useApiForm() {
   const [glmKey, setGlmKey] = useState("")
-  const [baseUrl, setBaseUrl] = useState("https://open.bigmodel.cn/api/paas/v4")
 
   useEffect(() => {
     http.get<{ user: { zhipuApiKey?: string } }>("/api/user")
@@ -145,14 +154,14 @@ export function useApiForm() {
     }
   }
 
-  return { glmKey, setGlmKey, baseUrl, setBaseUrl, handleSave }
+  return { glmKey, setGlmKey, handleSave }
 }
 
 export function useRagConfig() {
   const [chunkSize, setChunkSize] = useState(500)
   const [overlap, setOverlap] = useState(50)
   const [topK, setTopK] = useState(5)
-  const [temperature, setTemperature] = useState(0.3)
+  const [temperature, setTemperature] = useState(0.7)
 
   useEffect(() => {
     http.get<{ user: { ragConfig?: { chunkSize?: number; overlap?: number; topK?: number; temperature?: number } | null } }>("/api/user")

@@ -3,7 +3,7 @@ import test from 'node:test'
 import { deleteDocumentById, retryDocumentById } from '../src/lib/document-route-core.ts'
 import { handleUploadDocument } from '../src/lib/upload-route-core.ts'
 
-test('handleUploadDocument 成功上传并入队文档任务', async () => {
+test('handleUploadDocument succeeds and enqueues the document job', async () => {
   const calls: string[] = []
   const formData = new FormData()
   const file = new File(['hello world'], 'demo.md', { type: 'text/markdown' })
@@ -44,6 +44,15 @@ test('handleUploadDocument 成功上传并入队文档任务', async () => {
       setDocumentStorageKey: async (documentId, storageKey) => {
         calls.push(`storage:${documentId}:${storageKey}`)
       },
+      deleteObject: async (objectKey) => {
+        calls.push(`delete-object:${objectKey}`)
+      },
+      deleteDocumentRecord: async (documentId) => {
+        calls.push(`delete-record:${documentId}`)
+      },
+      updateDocumentStatus: async (documentId, status) => {
+        calls.push(`status:${documentId}:${status}`)
+      },
       enqueueDocumentJob: async (job) => {
         calls.push(`queue:${job.documentId}`)
         assert.deepEqual(job, {
@@ -73,7 +82,7 @@ test('handleUploadDocument 成功上传并入队文档任务', async () => {
   assert.equal(payload.data.document.status, 'processing')
 })
 
-test('handleUploadDocument 遇到 processing 重复文档时返回冲突', async () => {
+test('handleUploadDocument returns conflict for processing duplicate documents', async () => {
   const formData = new FormData()
   formData.set('kbId', 'cmuploadaaaaaaaaaaaaaaaaaa')
   formData.set('file', new File(['hello'], 'demo.md', { type: 'text/markdown' }))
@@ -94,6 +103,15 @@ test('handleUploadDocument 遇到 processing 重复文档时返回冲突', async
       setDocumentStorageKey: async () => {
         throw new Error('should not update storage key')
       },
+      deleteObject: async () => {
+        throw new Error('should not delete object')
+      },
+      deleteDocumentRecord: async () => {
+        throw new Error('should not delete record')
+      },
+      updateDocumentStatus: async () => {
+        throw new Error('should not update status')
+      },
       enqueueDocumentJob: async () => {
         throw new Error('should not enqueue job')
       },
@@ -106,7 +124,63 @@ test('handleUploadDocument 遇到 processing 重复文档时返回冲突', async
   assert.equal(payload.message, '文件正在处理中，请稍后')
 })
 
-test('deleteDocumentById 在清理失败时回滚取消标记', async () => {
+test('handleUploadDocument rolls back to failed when enqueueing fails', async () => {
+  const calls: string[] = []
+  const originalConsoleError = console.error
+  console.error = () => {}
+
+  try {
+    const formData = new FormData()
+    formData.set('kbId', 'cmuploadaaaaaaaaaaaaaaaaaa')
+    formData.set('file', new File(['hello world'], 'demo.md', { type: 'text/markdown' }))
+
+    const response = await handleUploadDocument(
+      new Request('http://localhost/api/upload', { method: 'POST', body: formData }),
+      'user-1',
+      {
+        rateLimit: async () => ({ ok: true }),
+        findKnowledgeBase: async () => ({ userId: 'user-1' }),
+        findExistingDocument: async () => null,
+        createDocument: async (input) => ({
+          id: 'doc-1',
+          fileName: input.fileName,
+          fileSize: input.fileSize,
+          status: input.status,
+          createdAt: new Date('2026-05-09T12:00:00Z'),
+        }),
+        uploadObject: async (objectKey) => {
+          calls.push(`upload:${objectKey}`)
+        },
+        setDocumentStorageKey: async (documentId, storageKey) => {
+          calls.push(`storage:${documentId}:${storageKey}`)
+        },
+        deleteObject: async (objectKey) => {
+          calls.push(`delete-object:${objectKey}`)
+        },
+        deleteDocumentRecord: async (documentId) => {
+          calls.push(`delete-record:${documentId}`)
+        },
+        updateDocumentStatus: async (documentId, status) => {
+          calls.push(`status:${documentId}:${status}`)
+        },
+        enqueueDocumentJob: async () => {
+          throw new Error('queue failed')
+        },
+      }
+    )
+
+    assert.equal(response.status, 500)
+    assert.deepEqual(calls, [
+      'upload:documents/doc-1/demo.md',
+      'storage:doc-1:documents/doc-1/demo.md',
+      'status:doc-1:failed',
+    ])
+  } finally {
+    console.error = originalConsoleError
+  }
+})
+
+test('deleteDocumentById clears cancellation markers when cleanup fails', async () => {
   const calls: string[] = []
   const originalConsoleError = console.error
   console.error = () => {}
@@ -140,7 +214,7 @@ test('deleteDocumentById 在清理失败时回滚取消标记', async () => {
   }
 })
 
-test('retryDocumentById 仅重试失败文档并重新入队', async () => {
+test('retryDocumentById requeues failed documents', async () => {
   const calls: string[] = []
 
   const response = await retryDocumentById('doc-9', 'user-1', {
@@ -183,4 +257,47 @@ test('retryDocumentById 仅重试失败文档并重新入队', async () => {
     'uncancel:doc-9',
     'queue:doc-9',
   ])
+})
+
+test('retryDocumentById restores failed status when requeueing fails', async () => {
+  const calls: string[] = []
+  const originalConsoleError = console.error
+  console.error = () => {}
+
+  try {
+    const response = await retryDocumentById('doc-9', 'user-1', {
+      rateLimit: async () => ({ ok: true }),
+      findDocument: async () => ({
+        id: 'doc-9',
+        fileName: 'retry.pdf',
+        mimeType: 'application/pdf',
+        status: 'failed',
+        storageKey: 'documents/doc-9/retry.pdf',
+        knowledgeBaseId: 'kb-9',
+        knowledgeBase: { userId: 'user-1' },
+      }),
+      purgeDocumentDerivedData: async (documentId) => {
+        calls.push(`purge:${documentId}`)
+      },
+      updateDocumentStatus: async (documentId, status) => {
+        calls.push(`status:${documentId}:${status}`)
+      },
+      clearDocumentCancellationRequested: async (documentId) => {
+        calls.push(`uncancel:${documentId}`)
+      },
+      enqueueDocumentJob: async () => {
+        throw new Error('queue failed')
+      },
+    })
+
+    assert.equal(response.status, 500)
+    assert.deepEqual(calls, [
+      'purge:doc-9',
+      'status:doc-9:processing',
+      'uncancel:doc-9',
+      'status:doc-9:failed',
+    ])
+  } finally {
+    console.error = originalConsoleError
+  }
 })

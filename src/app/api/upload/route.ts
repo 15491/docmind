@@ -1,4 +1,4 @@
-import { uploadFile } from '@/lib/minio'
+import { deleteFile, uploadFile } from '@/lib/minio'
 import { prisma } from '@/lib/prisma'
 import { enqueueDocumentJob } from '@/lib/queue'
 import { rateLimit } from '@/lib/rate-limit'
@@ -28,6 +28,16 @@ const uploadRouteDeps = {
     await prisma.document.update({
       where: { id: documentId },
       data: { storageKey },
+    })
+  },
+  deleteObject: deleteFile,
+  deleteDocumentRecord: async (documentId: string) => {
+    await prisma.document.delete({ where: { id: documentId } })
+  },
+  updateDocumentStatus: async (documentId: string, status: string) => {
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { status },
     })
   },
   enqueueDocumentJob,

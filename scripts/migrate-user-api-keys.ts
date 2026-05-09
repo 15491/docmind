@@ -1,5 +1,12 @@
-import { loadEnvConfig } from '@next/env'
+import { createRequire } from 'node:module'
 import { migrateLegacyUserApiKeysWithDeps } from '../src/lib/user-api-key-migration'
+
+const require = createRequire(import.meta.url)
+// Resolve @next/env from Next itself so this one-off script stays aligned with the installed Next version.
+const nextRequire = createRequire(require.resolve('next/package.json'))
+const { loadEnvConfig } = nextRequire('@next/env') as {
+  loadEnvConfig: (dir: string) => unknown
+}
 
 loadEnvConfig(process.cwd())
 

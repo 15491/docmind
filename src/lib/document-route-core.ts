@@ -97,15 +97,21 @@ export async function retryDocumentById(
 
     await deps.purgeDocumentDerivedData(documentId)
     await deps.updateDocumentStatus(documentId, 'processing')
-    await deps.clearDocumentCancellationRequested(documentId)
-    await deps.enqueueDocumentJob({
-      documentId,
-      knowledgeBaseId: document.knowledgeBaseId,
-      userId,
-      fileName: document.fileName,
-      mimeType: document.mimeType,
-      objectKey: document.storageKey,
-    })
+
+    try {
+      await deps.clearDocumentCancellationRequested(documentId)
+      await deps.enqueueDocumentJob({
+        documentId,
+        knowledgeBaseId: document.knowledgeBaseId,
+        userId,
+        fileName: document.fileName,
+        mimeType: document.mimeType,
+        objectKey: document.storageKey,
+      })
+    } catch (error) {
+      await deps.updateDocumentStatus(documentId, 'failed').catch(() => {})
+      throw error
+    }
 
     return R.noData()
   } catch (error) {

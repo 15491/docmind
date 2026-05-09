@@ -1,11 +1,9 @@
 import { randomInt } from "crypto"
-import { redis } from "./redis"
-import { sendEmail } from "./mailer"
 
 export type VerifyPurpose = "register" | "reset-password" | "change-email"
 
-const TTL = 300      // 验证码有效期 5 分钟
-const COOLDOWN = 60  // 重发冷却 60 秒
+const TTL = 300
+const COOLDOWN = 60
 const MAX_ATTEMPTS = 5
 
 interface CodeRecord {
@@ -14,30 +12,69 @@ interface CodeRecord {
   sentAt: number
 }
 
+export interface SendVerifyCodeDeps {
+  getRecord: (key: string) => Promise<string | null>
+  getRecordTtl: (key: string) => Promise<number>
+  setRecord: (key: string, ttlSeconds: number, value: string) => Promise<unknown>
+  deleteRecord: (key: string) => Promise<unknown>
+  sendEmail: (payload: { to: string; subject: string; html: string }) => Promise<unknown>
+}
+
 function key(purpose: VerifyPurpose, email: string) {
   return `verify:${purpose}:${email}`
 }
 
-export async function sendVerifyCode(purpose: VerifyPurpose, email: string) {
+export async function sendVerifyCodeWithDeps(
+  purpose: VerifyPurpose,
+  email: string,
+  deps: SendVerifyCodeDeps
+) {
   const k = key(purpose, email)
-  const raw = await redis.get(k)
+  const previousRaw = await deps.getRecord(k)
+  const previousTtl = previousRaw ? await deps.getRecordTtl(k) : 0
 
-  if (raw) {
-    const record = JSON.parse(raw) as CodeRecord
+  if (previousRaw) {
+    const record = JSON.parse(previousRaw) as CodeRecord
     const elapsed = Math.floor(Date.now() / 1000) - record.sentAt
     if (elapsed < COOLDOWN) {
-      throw Object.assign(new Error("发送太频繁，请稍后再试"), { code: "COOLDOWN" })
+      throw Object.assign(new Error("发送过于频繁，请稍后再试"), { code: "COOLDOWN" })
     }
   }
 
   const code = String(randomInt(100000, 1000000))
   const record: CodeRecord = { code, attempts: 0, sentAt: Math.floor(Date.now() / 1000) }
-  await redis.setex(k, TTL, JSON.stringify(record))
+  const nextRaw = JSON.stringify(record)
+  await deps.setRecord(k, TTL, nextRaw)
 
-  await sendEmail({
-    to: email,
-    subject: SUBJECTS[purpose],
-    html: renderEmail(code, purpose),
+  try {
+    await deps.sendEmail({
+      to: email,
+      subject: SUBJECTS[purpose],
+      html: renderEmail(code, purpose),
+    })
+  } catch (error) {
+    if (previousRaw && previousTtl > 0) {
+      await deps.setRecord(k, previousTtl, previousRaw).catch(() => {})
+    } else {
+      await deps.deleteRecord(k).catch(() => {})
+    }
+
+    throw error
+  }
+}
+
+export async function sendVerifyCode(purpose: VerifyPurpose, email: string) {
+  const [{ redis }, { sendEmail }] = await Promise.all([
+    import('./redis'),
+    import('./mailer'),
+  ])
+
+  return sendVerifyCodeWithDeps(purpose, email, {
+    getRecord: (key) => redis.get(key),
+    getRecordTtl: (key) => redis.ttl(key),
+    setRecord: (key, ttlSeconds, value) => redis.setex(key, ttlSeconds, value),
+    deleteRecord: (key) => redis.del(key),
+    sendEmail,
   })
 }
 
@@ -46,6 +83,7 @@ export async function verifyCode(
   email: string,
   input: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { redis } = await import('./redis')
   const k = key(purpose, email)
   const raw = await redis.get(k)
 

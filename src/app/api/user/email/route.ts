@@ -1,6 +1,8 @@
+import { changeEmailWithDeps } from '@/lib/email-route-core'
 import { prisma } from '@/lib/prisma'
 import { verifyCode } from '@/lib/verify-code'
-import { Err, R } from '@/lib/response'
+import { Err } from '@/lib/response'
+import { revokeAllSessions } from '@/lib/session-version'
 import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
 import { changeEmailSchema } from '@/lib/validators'
 import { withAuth } from '@/lib/with-auth'
@@ -11,14 +13,18 @@ export const PATCH = withAuth(async (req, _ctx, userId) => {
     if (isValidationErrorResponse(body)) return body
 
     const { email, code } = body
-    const result = await verifyCode('change-email', email, code)
-    if (!result.ok) return Err.invalid(result.error)
-
-    const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing && existing.id !== userId) return Err.conflict('该邮箱已被其他账号使用')
-
-    await prisma.user.update({ where: { id: userId }, data: { email } })
-    return R.noData()
+    return changeEmailWithDeps(userId, { email, code }, {
+      verifyChangeEmailCode: (targetEmail, inputCode) => verifyCode('change-email', targetEmail, inputCode),
+      findUserByEmail: (targetEmail) => prisma.user.findUnique({
+        where: { email: targetEmail },
+        select: { id: true },
+      }),
+      updateEmailByUserId: (id, targetEmail) => prisma.user.update({
+        where: { id },
+        data: { email: targetEmail },
+      }),
+      revokeAllSessions,
+    })
   } catch (error) {
     console.error('[/api/user/email] Error:', error)
     return Err.internal('修改邮箱失败')

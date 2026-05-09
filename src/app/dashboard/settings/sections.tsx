@@ -24,7 +24,9 @@ export function ProfileSection() {
           </FieldRow>
           <FieldRow label="邮箱" hint={showEmailChange ? undefined : "用于登录和通知"}>
             <div className="flex items-center gap-2 w-full">
-              <TextInput value={email} onChange={() => {}} type="email" placeholder="you@example.com" />
+              <div className="flex h-9 w-full items-center rounded-[8px] border-[1.5px] border-[#e2e2e8] bg-[#fafafc] px-3 text-[13px] text-[#62636b]">
+                {email || "you@example.com"}
+              </div>
               {!showEmailChange && (
                 <button
                   type="button"
@@ -43,7 +45,7 @@ export function ProfileSection() {
                 <p className="text-[12px] text-red-500">{emailError}</p>
               )}
               {step === "done" ? (
-                <p className="text-[12.5px] text-green-600">邮箱已更新，页面即将刷新…</p>
+                <p className="text-[12.5px] text-green-600">邮箱已更新，正在跳转到登录页…</p>
               ) : (
                 <>
                   <div className="flex gap-2">
@@ -111,21 +113,18 @@ export function ProfileSection() {
 }
 
 export function ApiSection() {
-  const { glmKey, setGlmKey, baseUrl, setBaseUrl, handleSave } = useApiForm()
+  const { glmKey, setGlmKey, handleSave } = useApiForm()
   return (
     <div>
       <div className="mb-5">
         <h2 className="text-[14px] font-semibold text-[#0f0f10]">API 配置</h2>
-        <p className="text-[12px] text-[#aaabb2] mt-0.5">配置大模型和向量化接口密钥</p>
+        <p className="text-[12px] text-[#aaabb2] mt-0.5">配置大模型调用密钥，地址由服务端统一管理</p>
       </div>
       <div className="mb-6">
         <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider mb-3">智谱 AI</p>
         <div className="bg-white border border-[#ebebed] rounded-[10px] px-5">
           <FieldRow label="API Key" hint="GLM-4-Flash 对话与 Embedding-3 向量化共用同一密钥">
             <MaskInput value={glmKey} onChange={setGlmKey} placeholder="sk-••••••••••••••••" />
-          </FieldRow>
-          <FieldRow label="API Base URL" hint="可使用自定义代理地址">
-            <TextInput value={baseUrl} onChange={setBaseUrl} />
           </FieldRow>
         </div>
       </div>
@@ -134,7 +133,9 @@ export function ApiSection() {
           <span className="text-[10px] font-bold text-zinc-500">i</span>
         </div>
         <p className="text-[12px] text-[#62636b] leading-relaxed">
-          API Key 加密保存在服务器，仅用于调用智谱 AI 接口。前往
+          API Key 加密保存在服务器，仅用于调用智谱 AI 接口。若需自定义代理地址，请在服务端配置
+          <code className="mx-1 rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700">ZHIPU_BASE_URL</code>
+          。前往
           <a href="https://open.bigmodel.cn" target="_blank" rel="noreferrer"
             className="text-zinc-700 font-semibold underline underline-offset-2 hover:text-zinc-900 mx-1">
             智谱开放平台
@@ -198,7 +199,7 @@ export function DangerSection() {
         <div className="bg-white border border-[#ebebed] rounded-[10px] p-5 flex items-center justify-between gap-4">
           <div>
             <p className="text-[13px] font-semibold text-[#35353d]">清空所有知识库</p>
-            <p className="text-[12px] text-[#aaabb2] mt-0.5">删除所有文档和向量索引，对话记录保留</p>
+            <p className="text-[12px] text-[#aaabb2] mt-0.5">删除所有文档、向量索引和关联对话记录，操作不可恢复</p>
           </div>
           <button
             type="button"

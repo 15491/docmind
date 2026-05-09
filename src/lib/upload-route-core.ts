@@ -59,6 +59,9 @@ export interface UploadRouteDeps {
   }) => Promise<CreatedDocument>
   uploadObject: (objectKey: string, buffer: Buffer, mimeType: string) => Promise<unknown>
   setDocumentStorageKey: (documentId: string, storageKey: string) => Promise<unknown>
+  deleteObject: (objectKey: string) => Promise<unknown>
+  deleteDocumentRecord: (documentId: string) => Promise<unknown>
+  updateDocumentStatus: (documentId: string, status: string) => Promise<unknown>
   enqueueDocumentJob: (job: UploadDocumentJob) => Promise<EnqueuedJob>
 }
 
@@ -67,6 +70,10 @@ export async function handleUploadDocument(
   userId: string,
   deps: UploadRouteDeps
 ): Promise<Response> {
+  let createdDocumentId: string | null = null
+  let uploadedObjectKey: string | null = null
+  let storageKeySaved = false
+
   try {
     const { ok } = await deps.rateLimit(`rl:upload:${userId}`, 10, 3600)
     if (!ok) return Err.tooMany('上传过于频繁，每小时最多 10 次')
@@ -104,10 +111,13 @@ export async function handleUploadDocument(
       contentHash,
       knowledgeBaseId: body.kbId,
     })
+    createdDocumentId = document.id
 
     const objectKey = `documents/${document.id}/${file.name}`
     await deps.uploadObject(objectKey, fileBuffer, file.type)
+    uploadedObjectKey = objectKey
     await deps.setDocumentStorageKey(document.id, objectKey)
+    storageKeySaved = true
 
     const job = await deps.enqueueDocumentJob({
       documentId: document.id,
@@ -129,6 +139,24 @@ export async function handleUploadDocument(
       },
     }, 202)
   } catch (error) {
+    if (createdDocumentId) {
+      if (storageKeySaved) {
+        await deps.updateDocumentStatus(createdDocumentId, 'failed').catch((rollbackError) => {
+          console.error('[/api/upload] Failed to roll back document status:', rollbackError)
+        })
+      } else {
+        if (uploadedObjectKey) {
+          await deps.deleteObject(uploadedObjectKey).catch((cleanupError) => {
+            console.error('[/api/upload] Failed to clean up uploaded object:', cleanupError)
+          })
+        }
+
+        await deps.deleteDocumentRecord(createdDocumentId).catch((cleanupError) => {
+          console.error('[/api/upload] Failed to delete incomplete document record:', cleanupError)
+        })
+      }
+    }
+
     console.error('[/api/upload] Error:', error)
     return Err.internal('文件上传失败')
   }

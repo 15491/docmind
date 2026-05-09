@@ -101,6 +101,7 @@ cp .env.example .env.local
 - `AUTH_SECRET`
 - `USER_API_KEY_ENCRYPTION_KEY`（推荐，未设置时回退到 `AUTH_SECRET`）
 - `ZHIPU_API_KEY`
+- `ZHIPU_BASE_URL`（可选，自定义代理或兼容网关时使用）
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
 - `TAVILY_API_KEY`（可选）

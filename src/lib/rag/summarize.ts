@@ -1,3 +1,5 @@
+import { buildZhipuUrl } from '@/lib/zhipu-config'
+
 interface MessageLike {
   role: string
   content: string
@@ -15,7 +17,7 @@ export async function summarizeMessages(
     .map((m) => `${m.role === 'user' ? '用户' : 'AI'}：${m.content}`)
     .join('\n')
 
-  const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+  const response = await fetch(buildZhipuUrl('/chat/completions'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
