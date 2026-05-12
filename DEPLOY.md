@@ -87,7 +87,8 @@ git clone <你的仓库地址> .
 ```yaml
 services:
   postgres:
-    image: postgres:16-alpine
+    # 与开发环境一致使用 pgvector 镜像（基于 PG 18），方便未来引入向量扩展
+    image: pgvector/pgvector:0.8.2-pg18-trixie
     container_name: docmind-postgres
     restart: unless-stopped
     environment:
@@ -100,7 +101,7 @@ services:
       - "127.0.0.1:5432:5432"   # 仅绑本机，不暴露公网
 
   redis:
-    image: redis:7-alpine
+    image: redis:latest
     container_name: docmind-redis
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
@@ -110,16 +111,13 @@ services:
       - "127.0.0.1:6379:6379"
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: elasticsearch:9.0.1
     container_name: docmind-es
     restart: unless-stopped
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false   # 单机内网部署可关；如要开则配 ELASTIC_PASSWORD
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"   # 内存吃紧可降到 512m
-      - bootstrap.memory_lock=true
-    ulimits:
-      memlock: { soft: -1, hard: -1 }
+      - "ES_JAVA_OPTS=-Xms512m -Xmx1g"   # 内存吃紧可降到 -Xmx512m
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     ports:
@@ -175,48 +173,59 @@ mc anonymous set download local/docmind   # 如果走 Nginx 代理就不需要
 
 ## 5. 配置 Next.js 应用环境变量
 
-在 `/opt/docmind` 下新建 `.env.production`（这是 Next.js 读取的）：
+在 `/opt/docmind` 下新建 `.env.production`（这是 Next.js / Worker 读取的）。**所有 key 名都已与项目的 `.env.example` 对齐**，照搬即可：
 
 ```bash
-# 数据库
+# 数据库（user / db 必须与 docker-compose.prod.yml 中的 POSTGRES_USER / POSTGRES_DB 一致）
 DATABASE_URL="postgresql://docmind:<POSTGRES_PASSWORD>@127.0.0.1:5432/docmind?schema=public"
 
-# Redis（BullMQ 用）
+# Redis（BullMQ 用；密码 URL-encode，特殊字符要转义）
 REDIS_URL="redis://default:<REDIS_PASSWORD>@127.0.0.1:6379"
 
 # Elasticsearch
-ELASTICSEARCH_URL="http://127.0.0.1:9200"
+ELASTICSEARCH_HOST="http://127.0.0.1:9200"
 
-# MinIO / S3 兼容
-S3_ENDPOINT="http://127.0.0.1:9000"
-S3_REGION="us-east-1"
-S3_ACCESS_KEY="docmind"
-S3_SECRET_KEY="<MINIO_ROOT_PASSWORD>"
-S3_BUCKET="docmind"
+# MinIO 对象存储（注意：项目按 endpoint / port / use_ssl 三段拆分，不是单一 URL）
+MINIO_ENDPOINT="127.0.0.1"
+MINIO_PORT="9000"
+MINIO_USE_SSL="false"
+MINIO_ACCESS_KEY="<同 MINIO_ROOT_USER>"
+MINIO_SECRET_KEY="<同 MINIO_ROOT_PASSWORD>"
+MINIO_BUCKET="docmind"
 
-# NextAuth
-NEXTAUTH_URL="https://docmind.yourdomain.com"
-NEXTAUTH_SECRET="<openssl rand -base64 32>"
+# NextAuth v5（注意 v5 用 AUTH_ 前缀，不是 NEXTAUTH_）
+# 生成命令：openssl rand -base64 32
+AUTH_SECRET="<openssl rand -base64 32>"
+# ⚠️ 重要：用户级 API key 加密密钥，一旦丢失，已存的用户 API key 全部解不出来。务必备份。
+USER_API_KEY_ENCRYPTION_KEY="<openssl rand -base64 32>"
 
-# GitHub OAuth（去 https://github.com/settings/developers 注册一个 OAuth App）
-GITHUB_CLIENT_ID="..."
-GITHUB_CLIENT_SECRET="..."
+# GitHub OAuth（去 https://github.com/settings/developers 注册一个 OAuth App，Callback 写
+# https://docmind.yourdomain.com/api/auth/callback/github）
+AUTH_GITHUB_ID="..."
+AUTH_GITHUB_SECRET="..."
+# 国内服务器拉 github.com 慢的话配本机代理；不需要就删掉这行
+# AUTH_GITHUB_PROXY_URL="http://127.0.0.1:7890"
+
+# Google OAuth（Callback：/api/auth/callback/google）
+AUTH_GOOGLE_ID="..."
+AUTH_GOOGLE_SECRET="..."
 
 # 智谱 AI
 ZHIPU_API_KEY="..."
+ZHIPU_BASE_URL="https://open.bigmodel.cn/api/paas/v4"
 
-# Tavily 网络搜索
+# Tavily 联网搜索
 TAVILY_API_KEY="..."
 
 # Resend 邮件
 RESEND_API_KEY="..."
-RESEND_FROM="DocMind <noreply@yourdomain.com>"
+EMAIL_FROM="noreply@yourdomain.com"
 
 # 生产环境
 NODE_ENV="production"
 ```
 
-> **注意**：实际环境变量名以你项目 `src/` 中实际用到的为准。可用 `grep -r "process.env\." src/` 校对一遍。
+> **校对**：`.env.example` 是 source of truth，发现这里有遗漏请以 `.env.example` 为准。可执行 `grep -r "process.env\." src/` 二次校验。
 
 ---
 
@@ -232,11 +241,19 @@ pnpm install --frozen-lockfile
 pnpm prisma migrate deploy
 pnpm prisma generate
 
-# 构建
+# 一次性脚本：把历史用户的 API key 用 USER_API_KEY_ENCRYPTION_KEY 加密回填
+# （从 commit f855ebe 起引入，全新部署也跑一遍无副作用）
+pnpm migrate:user-api-keys
+
+# 构建（项目已开启 output: 'standalone'，build 后会生成 .next/standalone/）
 pnpm build
+
+# 把 public 和 静态资源拷进 standalone 目录（standalone 不会自动包含它们）
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
 ```
 
-如果你 next.config 没开 standalone 输出，build 后整个 .next 目录即可。**强烈建议**在 `next.config.ts` 开 `output: 'standalone'`，部署体积会小一个数量级。
+> **关于 standalone**：项目 `next.config.ts` 已开启 `output: 'standalone'`，生产用 `node .next/standalone/server.js` 启动 Web，部署体积小一个数量级。**注意 Worker 进程不受影响**——`pnpm worker` 仍然跑 `tsx src/worker-process.ts`，依赖完整的源码 + `node_modules`，所以上面的 `pnpm install` 步骤不能省。
 
 ---
 
@@ -248,15 +265,20 @@ pnpm build
 module.exports = {
   apps: [
     {
+      // Web：跑 standalone 产物。HOSTNAME / PORT 是 standalone server.js 读取的环境变量
       name: 'docmind-web',
       cwd: '/opt/docmind',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start -p 3000',
-      env: { NODE_ENV: 'production' },
+      script: '.next/standalone/server.js',
+      env: {
+        NODE_ENV: 'production',
+        HOSTNAME: '127.0.0.1',
+        PORT: '3000',
+      },
       max_memory_restart: '1G',
       autorestart: true,
     },
     {
+      // Worker：和 standalone 无关，直接跑源码
       name: 'docmind-worker',
       cwd: '/opt/docmind',
       script: 'pnpm',
@@ -428,6 +450,7 @@ df -h
 按顺序逐项检查：
 
 - [ ] `https://docmind.yourdomain.com` 能打开首页，证书绿锁
+- [ ] `curl -i https://docmind.yourdomain.com/api/health` 返回 200，body 形如 `{"status":"ok","checks":{"postgres":{"status":"up"},"redis":{...},"elasticsearch":{...},"minio":{...}}}`；任一依赖挂时返回 503
 - [ ] 注册一个新账号 → 收到验证码邮件
 - [ ] GitHub OAuth 登录走通（Callback URL 配的是 `https://docmind.yourdomain.com/api/auth/callback/github`）
 - [ ] 创建知识库 → 上传一个 PDF → 状态从 processing → ready（看 worker 日志确认 BullMQ job 跑了）
@@ -450,6 +473,9 @@ git pull
 pnpm install --frozen-lockfile
 pnpm prisma migrate deploy
 pnpm build
+# standalone 产物需要重新拷 public 和 static
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
 pm2 restart all
 
 # 重启某个进程
