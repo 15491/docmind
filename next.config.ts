@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 生产部署用 .next/standalone/server.js 启动，体积小一个数量级
+  output: "standalone",
   reactCompiler: true,
   // pdfjs-dist 必须原生加载：若被 bundler 打包，GlobalWorkerOptions 会变成独立副本
   // 导致 workerSrc 设置对内部模块不可见，抛出 "No workerSrc specified" 错误

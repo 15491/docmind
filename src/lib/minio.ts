@@ -1,6 +1,6 @@
 import { Client } from 'minio'
 
-const minioClient = new Client({
+export const minioClient = new Client({
   endPoint: process.env.MINIO_ENDPOINT || 'localhost',
   port: parseInt(process.env.MINIO_PORT || '9000'),
   useSSL: process.env.MINIO_USE_SSL === 'true',
@@ -8,7 +8,7 @@ const minioClient = new Client({
   secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
 })
 
-const BUCKET = process.env.MINIO_BUCKET || 'docmind'
+export const BUCKET = process.env.MINIO_BUCKET || 'docmind'
 
 export async function uploadFile(
   objectKey: string,

@@ -1,7 +1,7 @@
 import { Client } from '@elastic/elasticsearch'
 import type { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types'
 
-const esClient = new Client({
+export const esClient = new Client({
   node: process.env.ELASTICSEARCH_HOST || 'http://localhost:9200',
 })
 
