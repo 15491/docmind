@@ -81,15 +81,12 @@ export function KbPageHeader({ kbId, kbName, pathname, docCount }: KbPageHeaderP
 
   const badge = showDocCount
     ? docCount && docCount > 0 ? (
-      <span
-        className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-        style={{ background: "rgba(16,185,129,0.08)", borderColor: "rgba(16,185,129,0.22)" }}
-      >
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      <span className="text-muted-foreground flex flex-shrink-0 items-center gap-1.5 text-[12px]">
+        <span className="bg-muted-foreground/40 h-1.5 w-1.5 rounded-full" />
         {docCount} 篇文档
       </span>
     ) : (
-      <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-600">
+      <span className="text-muted-foreground flex-shrink-0 text-[12px]">
         暂无文档
       </span>
     )
@@ -98,7 +95,7 @@ export function KbPageHeader({ kbId, kbName, pathname, docCount }: KbPageHeaderP
   const actions = action ? (
     <Link
       href={action.href}
-      className="flex h-8 items-center gap-1.5 rounded-[8px] border-[1.5px] border-[#ebebed] px-3 text-[12px] font-semibold text-[#62636b] transition-all hover:border-[#d0d0d8] hover:bg-[#fafafa] hover:text-[#0f0f10]"
+      className="border-input text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground flex h-8 items-center gap-1.5 rounded-[8px] border px-3 text-[12px] font-semibold transition-colors"
     >
       <action.icon size={12} strokeWidth={1.8} />
       {action.label}

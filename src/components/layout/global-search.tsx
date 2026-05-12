@@ -41,7 +41,7 @@ export function GlobalSearch({ collapsed }: GlobalSearchProps) {
         type="button"
         title={collapsed ? "搜索" : undefined}
         onClick={() => setOpen(true)}
-        className={`w-full flex h-[34px] items-center rounded-[8px] text-[#55555e] transition-colors hover:bg-[#f3f3f5] hover:text-[#0f0f10] ${
+        className={`w-full flex h-[34px] items-center rounded-[8px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
           collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
         }`}
       >
@@ -57,7 +57,7 @@ export function GlobalSearch({ collapsed }: GlobalSearchProps) {
           搜索
         </span>
         {!collapsed && (
-          <span className="ml-auto rounded-[7px] border border-[#ececf1] bg-[#fafafa] px-1.5 py-0.5 text-[10px] font-semibold text-[#aaabb2]">
+          <span className="ml-auto rounded-[7px] border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
             Ctrl K
           </span>
         )}
@@ -65,7 +65,7 @@ export function GlobalSearch({ collapsed }: GlobalSearchProps) {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          className="max-w-4xl overflow-hidden border-[#ebebed] bg-white p-0 shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+          className="max-w-4xl overflow-hidden border-border bg-card p-0 shadow-md"
           showCloseButton={false}
         >
           <DialogTitle className="sr-only">全局搜索</DialogTitle>

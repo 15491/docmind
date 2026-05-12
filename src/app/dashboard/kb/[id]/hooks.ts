@@ -56,7 +56,7 @@ export function useDocList(kbId: string, onCountChange?: () => void) {
   const fetchDocs = useCallback(async (mode: "replace" | "merge" = "replace") => {
     try {
       const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
-        `/api/documents/status?kbId=${kbId}`
+        `/api/documents/status?kbId=${kbId}&limit=${DOCS_FIRST_PAGE_SIZE}`
       )
       const latestDocs = data.documents ?? []
       const shouldMerge = mode === "merge" && hasLoadedMoreRef.current
@@ -82,7 +82,7 @@ export function useDocList(kbId: string, onCountChange?: () => void) {
     try {
       setLoadingMore(true)
       const data = await http.get<{ documents: Doc[]; nextCursor: string | null }>(
-        `/api/documents/status?kbId=${kbId}&cursor=${nextCursor}`
+        `/api/documents/status?kbId=${kbId}&cursor=${nextCursor}&limit=${DOCS_FIRST_PAGE_SIZE}`
       )
       const appendedDocs = data.documents ?? []
       setDocs((prev) => {

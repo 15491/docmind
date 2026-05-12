@@ -5,7 +5,7 @@ import { SearchWorkspace } from "@/components/search/search-workspace"
 
 export default function SearchPage() {
   return (
-    <div className="h-full overflow-y-auto bg-[#fcfcfd]">
+    <div className="h-full overflow-y-auto bg-background">
       <DashboardPageHeader
         size="compact"
         breadcrumbs={[

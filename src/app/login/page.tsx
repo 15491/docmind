@@ -36,15 +36,15 @@ function LoginForm() {
   }, [oauthError, router])
 
   return (
-    <div className="bg-white border border-[#ebebed] rounded-[14px] p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
-      <h1 className="text-[15px] font-bold text-[#0f0f10] mb-5 tracking-tight">登录你的账户</h1>
+    <div className="border-border bg-card rounded-[14px] border p-6 shadow-sm">
+      <h1 className="text-foreground mb-5 text-[15px] font-bold tracking-tight">登录你的账户</h1>
 
       <OAuthButtons mode="登录" />
 
-      <div className="flex items-center gap-3 mb-5">
-        <div className="flex-1 h-px bg-[#f0f0f3]" />
-        <span className="text-[11px] font-medium text-[#aaabb2]">或</span>
-        <div className="flex-1 h-px bg-[#f0f0f3]" />
+      <div className="mb-5 flex items-center gap-3">
+        <div className="bg-border h-px flex-1" />
+        <span className="text-muted-foreground text-[11px] font-medium">或</span>
+        <div className="bg-border h-px flex-1" />
       </div>
 
       <form onSubmit={handlePasswordSubmit}>
@@ -78,7 +78,7 @@ function LoginForm() {
             <label className={LABEL_CLS} style={{ marginBottom: 0 }}>密码</label>
             <Link
               href={email ? `/reset-password?email=${encodeURIComponent(email)}` : "/reset-password"}
-              className="text-[12px] text-[#aaabb2] transition-colors hover:text-zinc-700"
+              className="text-muted-foreground hover:text-foreground text-[12px] transition-colors"
             >
               忘记密码？
             </Link>
@@ -118,20 +118,19 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="block w-full h-9 rounded-[8px] text-white text-[13px] font-semibold hover:bg-zinc-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ background: "#18181b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 block h-9 w-full rounded-[8px] text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? "登录中…" : "登录"}
         </button>
       </form>
 
-      <p className="mt-3 text-[12px] leading-relaxed text-[#8a8b93]">
+      <p className="text-muted-foreground mt-3 text-[12px] leading-relaxed">
         如果你的账号最初是通过 GitHub 创建的，直接使用上方 GitHub 登录即可。登录后可在设置中补充邮箱密码。
       </p>
 
-      <p className="text-center text-[12.5px] text-[#aaabb2] mt-4">
+      <p className="text-muted-foreground mt-4 text-center text-[12.5px]">
         还没有账户？{" "}
-        <Link href="/register" className="text-zinc-700 font-semibold hover:text-zinc-900 transition-colors">
+        <Link href="/register" className="text-foreground hover:text-foreground/70 font-semibold transition-colors">
           注册 →
         </Link>
       </p>
@@ -141,10 +140,10 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4">
+    <div className="bg-muted/40 flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <AuthLogo />
-        <Suspense fallback={<div className="bg-white border border-[#ebebed] rounded-[14px] p-6 h-80" />}>
+        <Suspense fallback={<div className="border-border bg-card h-80 rounded-[14px] border p-6" />}>
           <LoginForm />
         </Suspense>
       </div>

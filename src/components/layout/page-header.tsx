@@ -23,11 +23,11 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
 
         return (
           <div key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-2.5">
-            {index > 0 ? <span className="flex-shrink-0 text-[#d8d8de]">/</span> : null}
+            {index > 0 ? <span className="text-muted-foreground/60 flex-shrink-0">/</span> : null}
             {item.href && !isLast ? (
               <Link
                 href={item.href}
-                className="truncate text-[12.5px] font-medium text-[#aaabb2] transition-colors hover:text-[#62636b]"
+                className="text-muted-foreground hover:text-foreground truncate text-[12.5px] font-medium transition-colors"
               >
                 {item.label}
               </Link>
@@ -35,8 +35,8 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
               <span
                 className={`truncate ${
                   isLast
-                    ? "text-[13.5px] font-semibold text-[#0f0f10]"
-                    : "text-[12.5px] font-medium text-[#aaabb2]"
+                    ? "text-foreground text-[13.5px] font-semibold"
+                    : "text-muted-foreground text-[12.5px] font-medium"
                 }`}
               >
                 {item.label}
@@ -60,7 +60,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   if (size === "compact") {
     return (
-      <header className="flex h-[52px] flex-shrink-0 items-center justify-between border-b border-[#ebebed] bg-white px-6">
+      <header className="border-border bg-background flex h-[52px] flex-shrink-0 items-center justify-between border-b px-6">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
           <Breadcrumbs items={breadcrumbs} />
           {badge}
@@ -71,14 +71,14 @@ export function PageHeader({
   }
 
   return (
-    <header className="flex-shrink-0 border-b border-[#f0f0f3] bg-white px-8 py-5">
+    <header className="border-border bg-background flex-shrink-0 border-b px-8 py-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Breadcrumbs items={breadcrumbs} />
           {title || description || meta ? (
             <div className="mt-3">
-              {title ? <h1 className="text-[18px] font-semibold tracking-tight text-[#0f0f10]">{title}</h1> : null}
-              {description ? <p className="mt-1 text-[12.5px] text-[#8a8b93]">{description}</p> : null}
+              {title ? <h1 className="text-foreground text-[18px] font-semibold tracking-tight">{title}</h1> : null}
+              {description ? <p className="text-muted-foreground mt-1 text-[12.5px]">{description}</p> : null}
               {meta ? <div className="mt-1.5">{meta}</div> : null}
             </div>
           ) : null}

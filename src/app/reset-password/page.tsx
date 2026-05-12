@@ -14,12 +14,11 @@ function ResetForm() {
     useResetPassword(initialEmail)
 
   return (
-    <div className="bg-white border border-[#ebebed] rounded-[14px] p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
-      <h1 className="text-[15px] font-bold text-[#0f0f10] mb-1.5 tracking-tight">重置密码</h1>
-      <p className="text-[12.5px] text-[#aaabb2] mb-5">验证邮箱后设置新密码</p>
+    <div className="border-border bg-card rounded-[14px] border p-6 shadow-sm">
+      <h1 className="text-foreground mb-1.5 text-[15px] font-bold tracking-tight">重置密码</h1>
+      <p className="text-muted-foreground mb-5 text-[12.5px]">验证邮箱后设置新密码</p>
 
       <form className="space-y-3" onSubmit={handleSubmit}>
-        {/* 邮箱 + 发送验证码 */}
         <div>
           <label className={LABEL_CLS}>邮箱</label>
           <div className="flex gap-2">
@@ -36,14 +35,13 @@ function ResetForm() {
               type="button"
               disabled={!form.email || cooldown > 0 || isSending}
               onClick={handleSendCode}
-              className="shrink-0 h-9 px-3 rounded-[8px] border-[1.5px] border-[#e2e2e8] text-[12.5px] font-medium text-[#35353d] hover:border-zinc-400 hover:bg-zinc-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground h-9 shrink-0 rounded-[8px] border px-3 text-[12.5px] font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
               {cooldown > 0 ? `${cooldown}s` : isSending ? "发送中…" : codeSent ? "重新发送" : "获取验证码"}
             </button>
           </div>
         </div>
 
-        {/* 验证码 */}
         <div>
           <label className={LABEL_CLS}>验证码</label>
           <input
@@ -58,7 +56,6 @@ function ResetForm() {
           />
         </div>
 
-        {/* 新密码 */}
         <div>
           <label className={LABEL_CLS}>新密码</label>
           <div className="relative">
@@ -85,16 +82,15 @@ function ResetForm() {
         <button
           type="submit"
           disabled={isPending || !codeSent}
-          className="block w-full h-9 rounded-[8px] text-white text-[13px] font-semibold hover:bg-zinc-700 transition-all mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ background: "#18181b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 mt-1 block h-9 w-full rounded-[8px] text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? "提交中…" : "重置密码"}
         </button>
       </form>
 
-      <p className="text-center text-[12.5px] text-[#aaabb2] mt-4">
+      <p className="text-muted-foreground mt-4 text-center text-[12.5px]">
         想起来了？{" "}
-        <Link href="/login" className="text-zinc-700 font-semibold hover:text-zinc-900 transition-colors">
+        <Link href="/login" className="text-foreground hover:text-foreground/70 font-semibold transition-colors">
           返回登录 →
         </Link>
       </p>
@@ -104,10 +100,10 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4">
+    <div className="bg-muted/40 flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <AuthLogo />
-        <Suspense fallback={<div className="bg-white border border-[#ebebed] rounded-[14px] p-6 h-72" />}>
+        <Suspense fallback={<div className="border-border bg-card h-72 rounded-[14px] border p-6" />}>
           <ResetForm />
         </Suspense>
       </div>

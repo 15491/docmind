@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { BookOpen, Loader2, Plus } from "lucide-react";
 import { DashboardPageHeader } from "@/components/layout/dashboard-shell";
 import { PageContent } from "@/components/layout/page-content";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   CreateKbDialog,
   DeleteKbDialog,
@@ -70,7 +71,7 @@ export default function DashboardPage() {
   }, [loadMore]);
 
   return (
-    <div ref={containerRef} className="h-full overflow-y-auto bg-white">
+    <div ref={containerRef} className="bg-background h-full overflow-y-auto">
       <DashboardPageHeader
         size="compact"
         breadcrumbs={[{ label: "控制台" }]}
@@ -78,7 +79,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex h-8 items-center gap-1.5 rounded-[8px] border border-[#ebebed] bg-white px-3.5 text-[12.5px] font-medium text-[#62636b] shadow-sm transition-all hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-700"
+            className="border-input bg-background text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground flex h-8 items-center gap-1.5 rounded-[8px] border px-3.5 text-[12.5px] font-medium transition-colors"
           >
             <Plus size={12} strokeWidth={2.5} />
             新建知识库
@@ -89,18 +90,18 @@ export default function DashboardPage() {
       <PageContent className="space-y-6">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-[18px] font-semibold tracking-tight text-[#0f0f10]">
+            <h1 className="text-foreground text-[18px] font-semibold tracking-tight">
               我的知识库
             </h1>
             {loadingMore ? (
-              <span className="text-[11px] text-[#aaabb2]">正在加载中</span>
+              <span className="text-muted-foreground text-[11px]">正在加载中</span>
             ) : null}
           </div>
-          <p className="mt-1 text-[12.5px] text-[#8a8b93]">
+          <p className="text-muted-foreground mt-1 text-[12.5px]">
             共 {total} 个知识库
           </p>
           {error ? (
-            <p className="mt-2 text-[12px] text-red-500">{error}</p>
+            <p className="text-destructive mt-2 text-[12px]">{error}</p>
           ) : null}
         </div>
 
@@ -109,11 +110,11 @@ export default function DashboardPage() {
             {[...Array(3)].map((_, index) => (
               <div
                 key={index}
-                className="animate-pulse rounded-[10px] border border-[#ebebed] bg-white p-5"
+                className="border-border bg-card rounded-[10px] border p-5"
               >
-                <div className="mb-4 h-9 w-9 rounded-[8px] bg-[#f0f0f3]" />
-                <div className="mb-2 h-4 w-3/4 rounded bg-[#f0f0f3]" />
-                <div className="h-3 w-1/2 rounded bg-[#f0f0f3]" />
+                <Skeleton className="mb-4 h-9 w-9 rounded-[8px]" />
+                <Skeleton className="mb-2 h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
               </div>
             ))}
           </div>
@@ -121,8 +122,8 @@ export default function DashboardPage() {
 
         {!loading && total === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center gap-3">
-            <BookOpen size={28} strokeWidth={1.3} className="text-[#d0d0d8]" />
-            <p className="text-[13px] text-[#aaabb2]">
+            <BookOpen size={28} strokeWidth={1.3} className="text-muted-foreground" />
+            <p className="text-muted-foreground text-[13px]">
               还没有知识库，点击“新建知识库”开始。
             </p>
           </div>
@@ -143,7 +144,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="flex min-h-[130px] flex-col items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#d8d8de] bg-white text-[#c0c0c8] transition-all hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-500"
+                className="border-border text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground flex min-h-[130px] flex-col items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed transition-colors"
               >
                 <Plus size={20} strokeWidth={1.5} />
                 <span className="text-[12.5px] font-medium">新建知识库</span>
@@ -154,7 +155,7 @@ export default function DashboardPage() {
               <div ref={bottomRef} className="h-1 w-full" />
 
               {loadingMore ? (
-                <div className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#ebebed] bg-white px-4 text-[12px] text-[#8a8b93]">
+                <div className="border-border bg-background text-muted-foreground inline-flex h-9 items-center gap-2 rounded-[10px] border px-4 text-[12px]">
                   <Loader2 size={14} strokeWidth={2} className="animate-spin" />
                   正在加载更多知识库
                 </div>
@@ -162,12 +163,12 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => void loadMore()}
-                  className="h-9 rounded-[10px] border border-[#ebebed] px-4 text-[12px] font-medium text-[#62636b] transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+                  className="border-input text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground h-9 rounded-[10px] border px-4 text-[12px] font-medium transition-colors"
                 >
                   加载更多
                 </button>
               ) : (
-                <p className="text-[12px] text-[#aaabb2]">已经到底了</p>
+                <p className="text-muted-foreground text-[12px]">已经到底了</p>
               )}
             </div>
           </>
@@ -201,4 +202,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

@@ -8,40 +8,37 @@ export default async function HomePage() {
   const isLoggedIn = !!session?.user?.id
 
   return (
-    <div className="h-screen bg-white text-[#0f0f10] flex flex-col overflow-hidden">
-      <nav className="flex items-center justify-between px-8 h-14 border-b border-[#ebebed] bg-white shrink-0">
+    <div className="bg-background text-foreground flex h-screen flex-col overflow-hidden">
+      <nav className="border-border bg-background flex h-14 shrink-0 items-center justify-between border-b px-8">
         <div className="flex items-center gap-2">
-          <div
-            className="w-[28px] h-[28px] rounded-[7px] flex items-center justify-center text-[12px] font-bold text-white tracking-tight"
-            style={{ background: "#18181b", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
-          >
+          <div className="bg-primary text-primary-foreground flex h-[28px] w-[28px] items-center justify-center rounded-[7px] text-[12px] font-bold tracking-tight">
             D
           </div>
-          <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight">DocMind</span>
+          <span className="text-foreground text-[14px] font-bold tracking-tight">DocMind</span>
         </div>
         {!isLoggedIn && (
-          <Link href="/login" className="h-8 px-4 rounded-[8px] text-[13px] font-semibold text-white hover:bg-zinc-700 transition-colors flex items-center" style={{ background: "#18181b", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
+          <Link
+            href="/login"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-8 items-center rounded-[8px] px-4 text-[13px] font-semibold transition-colors"
+          >
             登录
           </Link>
         )}
       </nav>
 
-      <section className="flex flex-col items-center text-center px-6 pt-12 pb-8 shrink-0">
-        <div
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[11.5px] font-semibold mb-6 text-zinc-600"
-          style={{ background: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.1)" }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+      <section className="flex shrink-0 flex-col items-center px-6 pt-12 pb-8 text-center">
+        <div className="border-border bg-muted text-muted-foreground mb-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[11.5px] font-semibold">
+          <span className="bg-muted-foreground h-1.5 w-1.5 rounded-full" />
           基于 GLM-4-Flash · Elasticsearch · Next.js 16
         </div>
 
-        <h1 className="text-[48px] font-bold leading-[1.1] tracking-tight text-[#0f0f10] max-w-2xl mb-4">
+        <h1 className="text-foreground mb-4 max-w-2xl text-[48px] leading-[1.1] font-bold tracking-tight">
           上传文档，即刻获得
           <br />
-          <span className="text-zinc-900">精准 AI 问答</span>
+          <span>精准 AI 问答</span>
         </h1>
 
-        <p className="text-[15px] text-[#62636b] leading-relaxed max-w-md mb-7">
+        <p className="text-muted-foreground mb-7 max-w-md text-[15px] leading-relaxed">
           告别信息幻觉。所有回答来自你上传的文档，
           <br />
           每条答案精准标注来源段落，可追溯，可验证。
@@ -50,8 +47,7 @@ export default async function HomePage() {
         <div className="flex items-center gap-3">
           <Link
             href="/register"
-            className="h-11 px-6 rounded-[10px] text-[14px] font-semibold text-white flex items-center gap-2 hover:bg-zinc-700 transition-all"
-            style={{ background: "#18181b", boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-11 items-center gap-2 rounded-[10px] px-6 text-[14px] font-semibold transition-colors"
           >
             免费开始使用
             <ArrowRight size={15} strokeWidth={2.5} />
@@ -59,31 +55,33 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="flex-1 px-8 max-w-4xl mx-auto w-full flex flex-col justify-center gap-8 pb-4">
+      <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-8 px-8 pb-4">
         <div className="grid grid-cols-3 gap-4">
-          {FEATURES.map(({ icon: Icon, title, desc, color, bg }) => (
+          {FEATURES.map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
-              className="bg-white border border-[#ebebed] rounded-[12px] p-5 hover:border-zinc-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all"
+              className="border-border bg-card hover:border-foreground/30 hover:bg-accent/30 rounded-[12px] border p-5 transition-colors"
             >
-              <div className={`w-9 h-9 rounded-[9px] ${bg} flex items-center justify-center mb-4`}>
-                <Icon size={17} strokeWidth={1.8} className={color} />
+              <div className="bg-muted mb-4 flex h-9 w-9 items-center justify-center rounded-[9px]">
+                <Icon size={17} strokeWidth={1.8} className="text-foreground" />
               </div>
-              <h3 className="text-[13.5px] font-semibold text-[#0f0f10] mb-1.5">{title}</h3>
-              <p className="text-[12.5px] text-[#62636b] leading-relaxed">{desc}</p>
+              <h3 className="text-foreground mb-1.5 text-[13.5px] font-semibold">{title}</h3>
+              <p className="text-muted-foreground text-[12.5px] leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
 
         <div>
-          <p className="text-[11px] font-bold text-[#c0c0c8] uppercase tracking-wider mb-5">三步上手</p>
+          <p className="text-muted-foreground mb-5 text-[11px] font-bold tracking-wider uppercase">三步上手</p>
           <div className="grid grid-cols-3 gap-8">
             {STEPS.map(({ num, title, desc }) => (
               <div key={num} className="flex gap-4">
-                <span className="text-[32px] font-bold text-[#ebebed] leading-none flex-shrink-0 tabular-nums">{num}</span>
+                <span className="text-muted/80 flex-shrink-0 text-[32px] leading-none font-bold tabular-nums">
+                  {num}
+                </span>
                 <div>
-                  <h3 className="text-[13.5px] font-semibold text-[#0f0f10] mb-1.5">{title}</h3>
-                  <p className="text-[12.5px] text-[#62636b] leading-relaxed">{desc}</p>
+                  <h3 className="text-foreground mb-1.5 text-[13.5px] font-semibold">{title}</h3>
+                  <p className="text-muted-foreground text-[12.5px] leading-relaxed">{desc}</p>
                 </div>
               </div>
             ))}
@@ -91,14 +89,16 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="shrink-0 border-t border-[#f0f0f3] px-8 h-12 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-[12px] text-[#aaabb2]">
+      <footer className="border-border flex h-12 shrink-0 items-center justify-between border-t px-8">
+        <div className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
           <Shield size={11} strokeWidth={2} />
           © 2026 DocMind
         </div>
-        <div className="flex items-center gap-4 text-[12px] text-[#aaabb2]">
-          <a href="https://github.com" className="hover:text-[#62636b] transition-colors">GitHub</a>
-          <span className="hover:text-[#62636b] transition-colors cursor-pointer">Privacy Policy</span>
+        <div className="text-muted-foreground flex items-center gap-4 text-[12px]">
+          <a href="https://github.com" className="hover:text-foreground transition-colors">
+            GitHub
+          </a>
+          <span className="hover:text-foreground cursor-pointer transition-colors">Privacy Policy</span>
         </div>
       </footer>
     </div>

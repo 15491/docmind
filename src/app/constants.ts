@@ -1,27 +1,21 @@
 import type { ElementType } from "react"
 import { FileText, Search, BookMarked } from "lucide-react"
 
-export const FEATURES: { icon: ElementType; title: string; desc: string; color: string; bg: string }[] = [
+export const FEATURES: { icon: ElementType; title: string; desc: string }[] = [
   {
     icon: FileText,
     title: "多格式支持",
     desc: "PDF / Markdown / TXT 自动解析入库，系统处理文档分块与向量化",
-    color: "text-zinc-600",
-    bg: "bg-zinc-100",
   },
   {
     icon: Search,
     title: "语义检索",
     desc: "余弦相似度向量检索，Top-K 精选最相关段落作为上下文",
-    color: "text-violet-500",
-    bg: "bg-violet-50",
   },
   {
     icon: BookMarked,
     title: "引用溯源",
     desc: "每条 AI 回答精准标注来源文档与段落序号，杜绝大模型幻觉",
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
   },
 ]
 

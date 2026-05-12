@@ -67,19 +67,23 @@ export function IconNav() {
 
   return (
     <nav
-      className="relative z-10 flex flex-shrink-0 flex-col border-r border-[#ebebed] bg-white"
+      className="border-border bg-background relative z-10 flex flex-shrink-0 flex-col border-r"
       style={{
         width: collapsed ? 52 : 220,
         transition: "width 0.2s cubic-bezier(0.4,0,0.2,1)",
         overflow: "visible",
       }}
     >
-      <div className={`h-[52px] flex items-center flex-shrink-0 border-b border-[#f0f0f3] overflow-hidden ${collapsed ? "justify-center" : "px-3 gap-2"}`}>
+      <div
+        className={`border-border flex h-[52px] flex-shrink-0 items-center overflow-hidden border-b ${
+          collapsed ? "justify-center" : "gap-2 px-3"
+        }`}
+      >
         {collapsed ? (
           <>
             <Link
               href="/dashboard"
-              className="w-[28px] h-[28px] rounded-[7px] bg-zinc-900 flex items-center justify-center text-[12px] font-bold text-white hover:bg-zinc-700 transition-colors"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-[28px] w-[28px] items-center justify-center rounded-[7px] text-[12px] font-bold transition-colors"
             >
               D
             </Link>
@@ -87,7 +91,7 @@ export function IconNav() {
               type="button"
               onClick={handleExpand}
               title="展开菜单"
-              className="absolute -right-[13px] top-[18px] w-[22px] h-[22px] rounded-full bg-white border border-[#e0e0e6] shadow-sm flex items-center justify-center text-[#aaabb2] hover:text-zinc-700 hover:border-zinc-300 hover:shadow-md transition-all z-20"
+              className="border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground absolute -right-[13px] top-[18px] z-20 flex h-[22px] w-[22px] items-center justify-center rounded-full border transition-colors"
             >
               <ChevronRight size={11} strokeWidth={2.5} />
             </button>
@@ -96,18 +100,18 @@ export function IconNav() {
           <>
             <Link
               href="/dashboard"
-              className="w-[28px] h-[28px] rounded-[7px] bg-zinc-900 flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0 hover:bg-zinc-700 transition-colors"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-[28px] w-[28px] flex-shrink-0 items-center justify-center rounded-[7px] text-[12px] font-bold transition-colors"
             >
               D
             </Link>
-            <span className="text-[14px] font-bold text-[#0f0f10] tracking-tight flex-1 whitespace-nowrap">
+            <span className="text-foreground flex-1 text-[14px] font-bold tracking-tight whitespace-nowrap">
               DocMind
             </span>
             <button
               type="button"
               onClick={handleCollapse}
               title="收起菜单"
-              className="absolute -right-[13px] top-[18px] w-[22px] h-[22px] rounded-full bg-white border border-[#e0e0e6] shadow-sm flex items-center justify-center text-[#aaabb2] hover:text-zinc-700 hover:border-zinc-300 hover:shadow-md transition-all z-20"
+              className="border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground absolute -right-[13px] top-[18px] z-20 flex h-[22px] w-[22px] items-center justify-center rounded-full border transition-colors"
             >
               <ChevronLeft size={11} strokeWidth={2.5} />
             </button>
@@ -115,9 +119,9 @@ export function IconNav() {
         )}
       </div>
 
-      <div className="flex-1 flex flex-col py-2 px-2 gap-0.5 overflow-hidden">
+      <div className="flex flex-1 flex-col gap-0.5 overflow-hidden px-2 py-2">
         {!collapsed && (
-          <p className="px-2 pt-1 pb-1.5 text-[10px] font-bold text-[#c8c8d0] uppercase tracking-[0.08em] whitespace-nowrap">
+          <p className="text-muted-foreground px-2 pb-1.5 pt-1 text-[10px] font-bold tracking-[0.08em] whitespace-nowrap uppercase">
             菜单
           </p>
         )}
@@ -130,12 +134,12 @@ export function IconNav() {
               key={href}
               href={href}
               title={collapsed ? label : undefined}
-              className={`flex items-center rounded-[8px] h-[34px] transition-colors whitespace-nowrap overflow-hidden ${
+              className={`flex h-[34px] items-center overflow-hidden rounded-[8px] whitespace-nowrap transition-colors ${
                 collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
               } ${
                 active
-                  ? "bg-zinc-900 text-white"
-                  : "text-[#55555e] hover:bg-[#f3f3f5] hover:text-[#0f0f10]"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <Icon size={15} strokeWidth={active ? 2.2 : 1.8} className="flex-shrink-0" />
@@ -156,9 +160,9 @@ export function IconNav() {
         <GlobalSearch collapsed={collapsed} />
       </div>
 
-      <div className="border-t border-[#f0f0f3] py-2 px-2 space-y-0.5">
+      <div className="border-border space-y-0.5 border-t px-2 py-2">
         {!collapsed && (
-          <p className="px-2 pt-0.5 pb-1 text-[10px] font-bold text-[#c8c8d0] uppercase tracking-[0.08em] whitespace-nowrap">
+          <p className="text-muted-foreground px-2 pb-1 pt-0.5 text-[10px] font-bold tracking-[0.08em] whitespace-nowrap uppercase">
             系统
           </p>
         )}
@@ -166,12 +170,12 @@ export function IconNav() {
         <Link
           href="/dashboard/settings"
           title={collapsed ? "设置" : undefined}
-          className={`flex items-center rounded-[8px] h-[34px] transition-colors whitespace-nowrap overflow-hidden ${
+          className={`flex h-[34px] items-center overflow-hidden rounded-[8px] whitespace-nowrap transition-colors ${
             collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
           } ${
             isSettingsActive
-              ? "bg-zinc-900 text-white"
-              : "text-[#55555e] hover:bg-[#f3f3f5] hover:text-[#0f0f10]"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
           <Settings size={15} strokeWidth={isSettingsActive ? 2.2 : 1.8} className="flex-shrink-0" />
@@ -192,33 +196,37 @@ export function IconNav() {
             type="button"
             title={collapsed ? (session?.user?.name ?? "用户") : undefined}
             onClick={() => setShowLogout((visible) => !visible)}
-            className={`w-full flex items-center rounded-[8px] h-[34px] cursor-pointer hover:bg-[#f3f3f5] transition-colors whitespace-nowrap overflow-hidden ${
+            className={`hover:bg-muted flex h-[34px] w-full cursor-pointer items-center overflow-hidden rounded-[8px] whitespace-nowrap transition-colors ${
               collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
             }`}
           >
-            <div className="w-[22px] h-[22px] rounded-full bg-zinc-900 flex items-center justify-center text-[9.5px] font-bold text-white flex-shrink-0">
+            <div className="bg-primary text-primary-foreground flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full text-[9.5px] font-bold">
               {(session?.user?.name ?? session?.user?.email ?? "U")[0].toUpperCase()}
             </div>
             <div
-              className="flex flex-col min-w-0"
+              className="flex min-w-0 flex-col"
               style={{
                 opacity: collapsed ? 0 : 1,
                 width: collapsed ? 0 : "auto",
                 transition: "opacity 0.15s ease",
               }}
             >
-              <span className="text-[12.5px] font-semibold text-[#0f0f10] truncate leading-tight">
+              <span className="text-foreground truncate text-[12.5px] font-semibold leading-tight">
                 {session?.user?.name ?? session?.user?.email ?? "用户"}
               </span>
-              <span className="text-[10.5px] text-[#aaabb2] truncate leading-tight">免费计划</span>
+              <span className="text-muted-foreground truncate text-[10.5px] leading-tight">免费计划</span>
             </div>
           </button>
           {showLogout && (
-            <div className={`absolute bottom-full mb-1.5 bg-white border border-[#ebebed] rounded-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] py-1 z-50 ${collapsed ? "left-0" : "left-0 right-0"}`}>
+            <div
+              className={`border-border bg-popover absolute bottom-full z-50 mb-1.5 rounded-[10px] border py-1 shadow-md ${
+                collapsed ? "left-0" : "left-0 right-0"
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => signOut({ redirectTo: "/login" })}
-                className="w-full flex items-center gap-2.5 px-3 h-[34px] text-[13px] text-red-500 hover:bg-red-50 transition-colors rounded-[8px]"
+                className="text-destructive hover:bg-destructive/10 flex h-[34px] w-full items-center gap-2.5 rounded-[8px] px-3 text-[13px] transition-colors"
               >
                 <LogOut size={14} strokeWidth={2} />
                 退出登录

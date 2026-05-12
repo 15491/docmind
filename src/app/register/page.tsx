@@ -10,19 +10,19 @@ export default function RegisterPage() {
   const { form, set, clear, showPassword, setShowPassword, handleSubmit, handleSendCode, isPending, isSending, codeSent, cooldown } = useRegisterForm()
 
   return (
-    <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4">
+    <div className="bg-muted/40 flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <AuthLogo />
 
-        <div className="bg-white border border-[#ebebed] rounded-[14px] p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)]">
-          <h1 className="text-[15px] font-bold text-[#0f0f10] mb-5 tracking-tight">创建你的账户</h1>
+        <div className="border-border bg-card rounded-[14px] border p-6 shadow-sm">
+          <h1 className="text-foreground mb-5 text-[15px] font-bold tracking-tight">创建你的账户</h1>
 
           <OAuthButtons mode="注册" />
 
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-[#f0f0f3]" />
-            <span className="text-[11px] font-medium text-[#aaabb2]">或</span>
-            <div className="flex-1 h-px bg-[#f0f0f3]" />
+          <div className="mb-5 flex items-center gap-3">
+            <div className="bg-border h-px flex-1" />
+            <span className="text-muted-foreground text-[11px] font-medium">或</span>
+            <div className="bg-border h-px flex-1" />
           </div>
 
           <form className="space-y-3" onSubmit={handleSubmit}>
@@ -66,7 +66,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleSendCode}
                   disabled={isSending || cooldown > 0 || !form.email}
-                  className="flex-shrink-0 h-9 px-3 rounded-[8px] text-[12.5px] font-semibold border border-[#e2e2e8] text-[#55555e] hover:border-zinc-400 hover:text-zinc-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground h-9 flex-shrink-0 rounded-[8px] border px-3 text-[12.5px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSending ? "发送中…" : cooldown > 0 ? `${cooldown}s` : codeSent ? "重新发送" : "发送验证码"}
                 </button>
@@ -103,7 +103,7 @@ export default function RegisterPage() {
                   required
                   minLength={8}
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                   {form.password && (
                     <button type="button" onClick={() => clear("password")} className={ICON_BTN_CLS} tabIndex={-1}>
                       <ClearIcon />
@@ -118,16 +118,15 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="block w-full h-9 rounded-[8px] text-white text-[13px] font-semibold hover:bg-zinc-700 transition-all mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: "#18181b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-1 block h-9 w-full rounded-[8px] text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? "注册中…" : "创建账户"}
             </button>
           </form>
 
-          <p className="text-center text-[12.5px] text-[#aaabb2] mt-4">
+          <p className="text-muted-foreground mt-4 text-center text-[12.5px]">
             已有账户？{" "}
-            <Link href="/login" className="text-zinc-700 font-semibold hover:text-zinc-900 transition-colors">
+            <Link href="/login" className="text-foreground hover:text-foreground/70 font-semibold transition-colors">
               登录 →
             </Link>
           </p>
@@ -136,4 +135,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

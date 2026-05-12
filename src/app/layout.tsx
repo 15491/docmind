@@ -22,7 +22,7 @@ export default function RootLayout({
         fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif`,
       }}
     >
-      <body className="min-h-full bg-white text-[#0f0f10] antialiased">
+      <body className="min-h-full bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
         <Toaster position="top-center" richColors />
       </body>

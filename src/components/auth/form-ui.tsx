@@ -1,11 +1,11 @@
 export const INPUT_CLS =
-  "w-full h-9 bg-white border-[1.5px] border-[#e2e2e8] rounded-[8px] px-3 pr-16 text-[13px] text-[#0f0f10] placeholder:text-[#c8c8d0] outline-none focus:border-zinc-700 focus:shadow-[0_0_0_3px_rgba(0,0,0,0.07)] transition-all font-sans"
+  "border-input bg-background text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring/40 h-9 w-full rounded-[8px] border px-3 pr-16 text-[13px] outline-none transition-colors focus:ring-2 font-sans"
 
 export const LABEL_CLS =
-  "block text-[11.5px] font-semibold text-[#62636b] mb-1.5 uppercase tracking-wide"
+  "text-muted-foreground mb-1.5 block text-[11.5px] font-semibold tracking-wide uppercase"
 
 export const ICON_BTN_CLS =
-  "flex items-center justify-center w-6 h-6 text-[#aaabb2] hover:text-[#55555e] transition-colors"
+  "text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center transition-colors"
 
 export function EyeIcon({ open }: { open: boolean }) {
   return open ? (
