@@ -4,8 +4,8 @@ import {
   getDocumentJobAbortReasonWithDeps,
   type ProcessableDocumentState,
 } from './document-job-guard-core'
-import { isDocumentCancellationRequested } from './queue'
-import { prisma } from './prisma'
+import { isDocumentCancellationRequested } from '@/lib/infra/queue'
+import { prisma } from '@/lib/infra/prisma'
 
 export {
   assertDocumentJobCanContinueWithDeps,

@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs'
-import { isUniqueConstraintError } from '@/lib/prisma-errors'
-import { prisma } from '@/lib/prisma'
-import { verifyCode } from '@/lib/verify-code'
-import { Err, R } from '@/lib/response'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
-import { registerSchema } from '@/lib/validators'
+import { isUniqueConstraintError } from '@/lib/infra/prisma-errors'
+import { prisma } from '@/lib/infra/prisma'
+import { verifyCode } from '@/lib/auth/verify-code'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { registerSchema } from '@/lib/http/validators'
 
 export async function POST(req: Request) {
   const body = await parseJsonBody(req, registerSchema)

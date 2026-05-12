@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { signIn, signOut } from "next-auth/react"
 import { toast } from "sonner"
-import { http, ApiError } from "@/lib/request"
+import { http, ApiError } from "@/lib/http/request"
 
 const LS_RAG = "docmind:rag-config"
 

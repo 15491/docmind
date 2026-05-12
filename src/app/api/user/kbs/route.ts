@@ -1,11 +1,11 @@
-import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
-import { prisma } from '@/lib/prisma'
+import { cleanupDocumentArtifacts } from '@/lib/document/document-cleanup'
+import { prisma } from '@/lib/infra/prisma'
 import {
   cancelDocumentProcessingJobs,
   clearDocumentCancellationRequests,
-} from '@/lib/queue'
-import { Err, R } from '@/lib/response'
-import { withAuth } from '@/lib/with-auth'
+} from '@/lib/infra/queue'
+import { Err, R } from '@/lib/http/response'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const DELETE = withAuth(async (_req, _ctx, userId) => {
   try {

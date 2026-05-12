@@ -65,8 +65,8 @@ export async function sendVerifyCodeWithDeps(
 
 export async function sendVerifyCode(purpose: VerifyPurpose, email: string) {
   const [{ redis }, { sendEmail }] = await Promise.all([
-    import('./redis'),
-    import('./mailer'),
+    import('@/lib/infra/redis'),
+    import('@/lib/mailer'),
   ])
 
   return sendVerifyCodeWithDeps(purpose, email, {
@@ -83,7 +83,7 @@ export async function verifyCode(
   email: string,
   input: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { redis } = await import('./redis')
+  const { redis } = await import('@/lib/infra/redis')
   const k = key(purpose, email)
   const raw = await redis.get(k)
 

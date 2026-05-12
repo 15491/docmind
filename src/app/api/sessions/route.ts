@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma'
-import { getCreatedAtDescCursorOrderBy } from '@/lib/cursor-pagination'
-import { listSessionsByKnowledgeBase } from '@/lib/session-route-core'
-import { withAuth } from '@/lib/with-auth'
+import { prisma } from '@/lib/infra/prisma'
+import { getCreatedAtDescCursorOrderBy } from '@/lib/http/cursor-pagination'
+import { listSessionsByKnowledgeBase } from '@/lib/route-core/session-route-core'
+import { withAuth } from '@/lib/http/with-auth'
 
 const sessionListDeps = {
   findKnowledgeBase: (kbId: string) => prisma.knowledgeBase.findUnique({

@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { http, ApiError } from "@/lib/request"
+import { http, ApiError } from "@/lib/http/request"
 import type { ResetForm } from "./types"
 
 export function useResetPassword(initialEmail = "") {

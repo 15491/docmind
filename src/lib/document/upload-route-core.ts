@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
-import { Err, R } from './response'
-import { isValidationErrorResponse, validateFile, validateRequest } from './validate-request'
-import { uploadFileSchema } from './validators'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, validateFile, validateRequest } from '@/lib/http/validate-request'
+import { uploadFileSchema } from '@/lib/http/validators'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024
 const ALLOWED_TYPES = [

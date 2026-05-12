@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server'
-import { limitSendCodeRequest } from '@/lib/auth-rate-limit'
-import { THIRD_PARTY_PASSWORD_SETUP_MESSAGE } from '@/lib/auth-messages'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { Err, R } from '@/lib/response'
-import { sendVerifyCode, type VerifyPurpose } from '@/lib/verify-code'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
-import { sendCodeSchema } from '@/lib/validators'
+import { limitSendCodeRequest } from '@/lib/auth/auth-rate-limit'
+import { THIRD_PARTY_PASSWORD_SETUP_MESSAGE } from '@/lib/auth/auth-messages'
+import { auth } from '@/lib/auth/auth'
+import { prisma } from '@/lib/infra/prisma'
+import { Err, R } from '@/lib/http/response'
+import { sendVerifyCode, type VerifyPurpose } from '@/lib/auth/verify-code'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { sendCodeSchema } from '@/lib/http/validators'
 
 export async function POST(req: NextRequest) {
   const body = await parseJsonBody(req, sendCodeSchema)

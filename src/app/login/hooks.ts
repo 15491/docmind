@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
-import { THIRD_PARTY_PASSWORD_SIGNIN_MESSAGE } from "@/lib/auth-messages"
+import { THIRD_PARTY_PASSWORD_SIGNIN_MESSAGE } from "@/lib/auth/auth-messages"
 
 export function useLoginFlow() {
   const router = useRouter()

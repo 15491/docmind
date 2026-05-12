@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs'
-import { changePasswordWithDeps } from '@/lib/password-route-core'
-import { prisma } from '@/lib/prisma'
-import { revokeAllSessions } from '@/lib/session-version'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
-import { changePasswordSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+import { changePasswordWithDeps } from '@/lib/auth/password-route-core'
+import { prisma } from '@/lib/infra/prisma'
+import { revokeAllSessions } from '@/lib/auth/session-version'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { changePasswordSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const PATCH = withAuth(async (req, _ctx, userId) => {
   const body = await parseJsonBody(req, changePasswordSchema)

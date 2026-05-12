@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { redis } from '@/lib/redis'
-import { esClient } from '@/lib/elasticsearch'
-import { minioClient, BUCKET } from '@/lib/minio'
+import { prisma } from '@/lib/infra/prisma'
+import { redis } from '@/lib/infra/redis'
+import { esClient } from '@/lib/infra/elasticsearch'
+import { minioClient, BUCKET } from '@/lib/infra/minio'
 
 const CHECK_TIMEOUT_MS = 3000
 

@@ -1,14 +1,14 @@
-import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
-import { deleteDocumentById } from '@/lib/document-route-core'
-import { prisma } from '@/lib/prisma'
+import { cleanupDocumentArtifacts } from '@/lib/document/document-cleanup'
+import { deleteDocumentById } from '@/lib/document/document-route-core'
+import { prisma } from '@/lib/infra/prisma'
 import {
   cancelDocumentProcessingJobs,
   clearDocumentCancellationRequests,
-} from '@/lib/queue'
-import { Err, R } from '@/lib/response'
-import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
-import { idParamSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+} from '@/lib/infra/queue'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/http/validate-request'
+import { idParamSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const GET = withAuth(async (_req, ctx, userId) => {
   try {

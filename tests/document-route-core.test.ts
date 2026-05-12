@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { deleteDocumentById, retryDocumentById } from '../src/lib/document-route-core.ts'
-import { handleUploadDocument } from '../src/lib/upload-route-core.ts'
+import { deleteDocumentById, retryDocumentById } from '../src/lib/document/document-route-core.ts'
+import { handleUploadDocument } from '../src/lib/document/upload-route-core.ts'
 
 test('handleUploadDocument succeeds and enqueues the document job', async () => {
   const calls: string[] = []

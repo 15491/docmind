@@ -4,7 +4,7 @@ import {
   buildEncryptedApiKeyForMigration,
   migrateLegacyUserApiKeysWithDeps,
   needsUserApiKeyMigration,
-} from '../src/lib/user-api-key-migration.ts'
+} from '../src/lib/api-key/user-api-key-migration.ts'
 
 test('needsUserApiKeyMigration 仅识别明文 API Key', () => {
   const previousSecret = process.env.USER_API_KEY_ENCRYPTION_KEY

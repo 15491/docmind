@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { fetchEventSource } from "@microsoft/fetch-event-source"
-import { http } from "@/lib/request"
+import { http } from "@/lib/http/request"
 import type { Message } from "./types"
 
 const EMPTY_MESSAGES: Message[] = []

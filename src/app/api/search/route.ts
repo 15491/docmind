@@ -1,10 +1,10 @@
-import { searchChunks } from '@/lib/elasticsearch'
-import { getUserContext } from '@/lib/get-api-key'
-import { prisma } from '@/lib/prisma'
-import { rateLimit } from '@/lib/rate-limit'
+import { searchChunks } from '@/lib/infra/elasticsearch'
+import { getUserContext } from '@/lib/api-key/get-api-key'
+import { prisma } from '@/lib/infra/prisma'
+import { rateLimit } from '@/lib/http/rate-limit'
 import { embedText } from '@/lib/rag/embeddings'
-import { handleSearchRequest } from '@/lib/search-route-core'
-import { withAuth } from '@/lib/with-auth'
+import { handleSearchRequest } from '@/lib/route-core/search-route-core'
+import { withAuth } from '@/lib/http/with-auth'
 
 const searchRouteDeps = {
   rateLimit,

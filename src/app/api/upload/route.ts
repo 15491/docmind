@@ -1,10 +1,10 @@
-import { deleteFile, uploadFile } from '@/lib/minio'
-import { isUniqueConstraintError } from '@/lib/prisma-errors'
-import { prisma } from '@/lib/prisma'
-import { enqueueDocumentJob } from '@/lib/queue'
-import { rateLimit } from '@/lib/rate-limit'
-import { handleUploadDocument } from '@/lib/upload-route-core'
-import { withAuth } from '@/lib/with-auth'
+import { deleteFile, uploadFile } from '@/lib/infra/minio'
+import { isUniqueConstraintError } from '@/lib/infra/prisma-errors'
+import { prisma } from '@/lib/infra/prisma'
+import { enqueueDocumentJob } from '@/lib/infra/queue'
+import { rateLimit } from '@/lib/http/rate-limit'
+import { handleUploadDocument } from '@/lib/document/upload-route-core'
+import { withAuth } from '@/lib/http/with-auth'
 
 const uploadRouteDeps = {
   rateLimit,

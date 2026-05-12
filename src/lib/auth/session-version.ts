@@ -1,4 +1,4 @@
-import { redis } from './redis'
+import { redis } from '@/lib/infra/redis'
 
 const KEY = (userId: string) => `session:ver:${userId}`
 const TTL = 60 * 60 * 24 * 30 // 30 天，与 NextAuth maxAge 对齐

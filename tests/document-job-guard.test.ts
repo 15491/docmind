@@ -4,7 +4,7 @@ import {
   assertDocumentJobCanContinueWithDeps,
   DocumentJobAbortedError,
   getDocumentJobAbortReasonWithDeps,
-} from '../src/lib/document-job-guard-core.ts'
+} from '../src/lib/document/document-job-guard-core.ts'
 
 test('getDocumentJobAbortReasonWithDeps 在任务被取消时返回原因', async () => {
   const reason = await getDocumentJobAbortReasonWithDeps('doc-1', 'key', {

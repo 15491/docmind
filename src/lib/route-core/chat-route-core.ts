@@ -1,5 +1,5 @@
-import type { HistoryMessage } from './rag/generation'
-import type { WebResult } from './web-search'
+import type { HistoryMessage } from '@/lib/rag/generation'
+import type { WebResult } from '@/lib/web-search'
 
 export interface RetrievedChunk {
   id: string

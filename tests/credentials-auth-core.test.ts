@@ -3,7 +3,7 @@ import test from 'node:test'
 import {
   authorizeCredentialsWithDeps,
   authorizeCredentialsWithRateLimitDeps,
-} from '../src/lib/credentials-auth-core.ts'
+} from '../src/lib/auth/credentials-auth-core.ts'
 
 test('authorizeCredentialsWithDeps 会先标准化邮箱再查找用户', async () => {
   const calls: string[] = []

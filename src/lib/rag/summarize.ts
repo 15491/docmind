@@ -1,4 +1,4 @@
-import { buildZhipuUrl } from '@/lib/zhipu-config'
+import { buildZhipuUrl } from '@/lib/api-key/zhipu-config'
 
 interface MessageLike {
   role: string

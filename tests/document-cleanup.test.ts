@@ -4,7 +4,7 @@ import {
   cleanupDocumentArtifactsWithClients,
   DocumentCleanupError,
   purgeDocumentDerivedDataWithClients,
-} from '../src/lib/document-cleanup.ts'
+} from '../src/lib/document/document-cleanup.ts'
 
 test('cleanupDocumentArtifactsWithClients 会同时清理搜索索引与对象存储', async () => {
   const calls: string[] = []

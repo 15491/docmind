@@ -1,8 +1,8 @@
-import { prisma } from '@/lib/prisma'
-import { Err, R } from '@/lib/response'
-import { isValidationErrorResponse, parseJsonBody, validateSearchParams } from '@/lib/validate-request'
-import { createKbSchema, kbListQuerySchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+import { prisma } from '@/lib/infra/prisma'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, parseJsonBody, validateSearchParams } from '@/lib/http/validate-request'
+import { createKbSchema, kbListQuerySchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const GET = withAuth(async (req, _ctx, userId) => {
   try {

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { withAuth } from '@/lib/with-auth'
+import { prisma } from '@/lib/infra/prisma'
+import { withAuth } from '@/lib/http/with-auth'
 import { streamWithToolDetection, type HistoryMessage } from '@/lib/rag/generation'
 import { summarizeMessages } from '@/lib/rag/summarize'
 import { webSearch, type WebResult } from '@/lib/web-search'
-import { rateLimit } from '@/lib/rate-limit'
-import { getUserContext } from '@/lib/get-api-key'
-import { Err } from '@/lib/response'
-import { chatSchema } from '@/lib/validators'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
+import { rateLimit } from '@/lib/http/rate-limit'
+import { getUserContext } from '@/lib/api-key/get-api-key'
+import { Err } from '@/lib/http/response'
+import { chatSchema } from '@/lib/http/validators'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
 import { formatContext, streamDocumentAnswer } from '@/lib/langchain/chains/document-qa'
 import { extractAnswerMetadata } from '@/lib/langchain/chains/structured-answer'
 import { KnowledgeBaseRetriever } from '@/lib/langchain/retrievers/kb-retriever'
@@ -21,7 +21,7 @@ import {
   heuristicChatRoute,
   mapChatSources,
   type RetrievedChunk,
-} from '@/lib/chat-route-core'
+} from '@/lib/route-core/chat-route-core'
 
 export const POST = withAuth(async (req, _ctx, userId) => {
   try {

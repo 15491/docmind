@@ -1,7 +1,7 @@
 // 独立 Worker 进程入口 — 生产环境与 Web 进程分离部署
 // 启动方式: npm run worker
 
-import { startWorker, stopWorker } from '@/lib/worker'
+import { startWorker, stopWorker } from '@/lib/infra/worker'
 
 async function main() {
   await startWorker()

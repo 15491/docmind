@@ -6,11 +6,11 @@ import { chunkText } from './chunk'
 import {
   getDocumentJobAbortReason,
   isDocumentJobAbortedError,
-} from '@/lib/document-job-guard'
+} from '@/lib/document/document-job-guard'
 import { embedText } from './embeddings'
-import { purgeDocumentDerivedData } from '@/lib/document-cleanup'
-import { indexChunks } from '@/lib/elasticsearch'
-import { prisma } from '@/lib/prisma'
+import { purgeDocumentDerivedData } from '@/lib/document/document-cleanup'
+import { indexChunks } from '@/lib/infra/elasticsearch'
+import { prisma } from '@/lib/infra/prisma'
 
 export interface ProcessDocumentProps {
   buffer: Buffer

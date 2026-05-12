@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { ApiError, http } from "@/lib/request"
+import { ApiError, http } from "@/lib/http/request"
 import type { Kb } from "@/app/dashboard/types"
 import type { Doc } from "./types"
 

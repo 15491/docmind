@@ -2,11 +2,11 @@ import { Worker } from 'bullmq'
 import {
   assertDocumentJobCanContinue,
   isDocumentJobAbortedError,
-} from '@/lib/document-job-guard'
-import { getUserContext } from '@/lib/get-api-key'
-import { downloadFile } from '@/lib/minio'
-import type { DocumentJob } from '@/lib/queue'
-import { redis } from '@/lib/redis'
+} from '@/lib/document/document-job-guard'
+import { getUserContext } from '@/lib/api-key/get-api-key'
+import { downloadFile } from '@/lib/infra/minio'
+import type { DocumentJob } from '@/lib/infra/queue'
+import { redis } from '@/lib/infra/redis'
 import { processDocument } from '@/lib/rag/document-processor'
 
 let worker: Worker<DocumentJob> | null = null

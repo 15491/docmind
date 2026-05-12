@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { ArrowRight, Shield } from "lucide-react"
 import { FEATURES, STEPS } from "./constants"
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/auth"
 
 export default async function HomePage() {
   const session = await auth()

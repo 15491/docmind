@@ -1,17 +1,17 @@
-import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
-import { prisma } from '@/lib/prisma'
+import { cleanupDocumentArtifacts } from '@/lib/document/document-cleanup'
+import { prisma } from '@/lib/infra/prisma'
 import {
   cancelDocumentProcessingJobs,
   clearDocumentCancellationRequests,
-} from '@/lib/queue'
-import { Err, R } from '@/lib/response'
+} from '@/lib/infra/queue'
+import { Err, R } from '@/lib/http/response'
 import {
   isValidationErrorResponse,
   parseJsonBody,
   validateRouteParams,
-} from '@/lib/validate-request'
-import { createKbSchema, idParamSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+} from '@/lib/http/validate-request'
+import { createKbSchema, idParamSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const GET = withAuth(async (_req, ctx, userId) => {
   try {

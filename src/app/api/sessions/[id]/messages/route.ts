@@ -1,8 +1,8 @@
-import { prisma } from '@/lib/prisma'
-import { getSessionMessagesById } from '@/lib/session-route-core'
-import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
-import { idParamSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+import { prisma } from '@/lib/infra/prisma'
+import { getSessionMessagesById } from '@/lib/route-core/session-route-core'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/http/validate-request'
+import { idParamSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 const sessionMessagesDeps = {
   findSession: (sessionId: string) => prisma.chatSession.findUnique({

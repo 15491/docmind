@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-export { normalizeEmailAddress } from './email'
+export { normalizeEmailAddress } from '@/lib/email'
 
 type HeaderCarrier = {
   headers: Pick<Headers, 'get'>

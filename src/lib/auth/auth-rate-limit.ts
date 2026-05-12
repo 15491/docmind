@@ -3,7 +3,7 @@ import {
   getClientIp,
   normalizeEmailAddress,
 } from './auth-rate-limit-core'
-import { rateLimit } from './rate-limit'
+import { rateLimit } from '@/lib/http/rate-limit'
 
 type HeaderCarrier = {
   headers: Pick<Headers, 'get'>

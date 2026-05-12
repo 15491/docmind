@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react"
 import { Download, ExternalLink, FileText, Loader2, TriangleAlert } from "lucide-react"
 import { MarkdownContent } from "@/components/ui/markdown-content"
-import { ApiError, http } from "@/lib/request"
+import { ApiError, http } from "@/lib/http/request"
 import { StatusBadge } from "../../components"
 import type { Doc } from "../../types"
 

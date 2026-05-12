@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { changePasswordWithDeps, resetPasswordWithDeps } from '../src/lib/password-route-core.ts'
+import { changePasswordWithDeps, resetPasswordWithDeps } from '../src/lib/auth/password-route-core.ts'
 
 test('resetPasswordWithDeps revokes existing sessions after updating the password', async () => {
   const calls: string[] = []

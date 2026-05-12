@@ -12,7 +12,7 @@ class RateLimitedCredentialsSignin extends CredentialsSignin {
 }
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
-import { prisma } from "./prisma"
+import { prisma } from "@/lib/infra/prisma"
 import { authConfig } from "./auth.config"
 import { authorizeCredentialsWithRateLimitDeps } from "./credentials-auth-core"
 

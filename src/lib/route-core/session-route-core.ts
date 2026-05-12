@@ -1,6 +1,6 @@
-import { Err, R } from './response'
-import { isValidationErrorResponse, validateSearchParams } from './validate-request'
-import { sessionsQuerySchema } from './validators'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, validateSearchParams } from '@/lib/http/validate-request'
+import { sessionsQuerySchema } from '@/lib/http/validators'
 
 type KnowledgeBaseRecord = {
   userId: string

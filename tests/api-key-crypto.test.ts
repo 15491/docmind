@@ -6,7 +6,7 @@ import {
   isEncryptedApiKey,
   looksLikeMaskedApiKey,
   maskUserApiKey,
-} from '../src/lib/api-key-crypto.ts'
+} from '../src/lib/api-key/api-key-crypto.ts'
 
 test('encryptUserApiKey 与 decryptStoredApiKey 可以往返还原', () => {
   const previousSecret = process.env.USER_API_KEY_ENCRYPTION_KEY

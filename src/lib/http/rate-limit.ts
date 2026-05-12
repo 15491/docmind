@@ -1,4 +1,4 @@
-import { rateLimitRedis } from './redis'
+import { rateLimitRedis } from '@/lib/infra/redis'
 import { rateLimitWithClient } from './rate-limit-core'
 
 /**

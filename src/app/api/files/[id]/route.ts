@@ -1,10 +1,10 @@
 import { Readable } from 'node:stream'
-import { getFileStream } from '@/lib/minio'
-import { prisma } from '@/lib/prisma'
-import { Err } from '@/lib/response'
-import { isValidationErrorResponse, validateRouteParams } from '@/lib/validate-request'
-import { idParamSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+import { getFileStream } from '@/lib/infra/minio'
+import { prisma } from '@/lib/infra/prisma'
+import { Err } from '@/lib/http/response'
+import { isValidationErrorResponse, validateRouteParams } from '@/lib/http/validate-request'
+import { idParamSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 function encodeContentDispositionFilename(fileName: string) {
   return encodeURIComponent(fileName).replace(/['()*]/g, (char) => (

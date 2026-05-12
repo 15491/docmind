@@ -4,7 +4,7 @@ import {
   buildRateLimitKey,
   getClientIp,
   normalizeEmailAddress,
-} from '../src/lib/auth-rate-limit-core.ts'
+} from '../src/lib/auth/auth-rate-limit-core.ts'
 
 test('normalizeEmailAddress 会统一 trim 并转小写', () => {
   assert.equal(normalizeEmailAddress('  USER@Example.COM  '), 'user@example.com')

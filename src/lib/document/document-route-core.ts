@@ -1,4 +1,4 @@
-import { Err, R } from './response'
+import { Err, R } from '@/lib/http/response'
 
 type RateLimitResult = {
   ok: boolean

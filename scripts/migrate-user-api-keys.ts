@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { migrateLegacyUserApiKeysWithDeps } from '../src/lib/user-api-key-migration'
+import { migrateLegacyUserApiKeysWithDeps } from '../src/lib/api-key/user-api-key-migration'
 
 const require = createRequire(import.meta.url)
 // Resolve @next/env from Next itself so this one-off script stays aligned with the installed Next version.
@@ -35,7 +35,7 @@ function parseArgs(argv: string[]) {
 }
 
 async function main() {
-  const { prisma } = await import('../src/lib/prisma')
+  const { prisma } = await import('../src/lib/infra/prisma')
   prismaForCleanup = prisma
   const { dryRun, batchSize } = parseArgs(process.argv.slice(2))
 

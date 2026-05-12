@@ -1,6 +1,6 @@
-import { deleteDocumentChunks } from './elasticsearch'
-import { deleteFile } from './minio'
-import { prisma } from './prisma'
+import { deleteDocumentChunks } from '@/lib/infra/elasticsearch'
+import { deleteFile } from '@/lib/infra/minio'
+import { prisma } from '@/lib/infra/prisma'
 
 export interface DocumentArtifact {
   id: string

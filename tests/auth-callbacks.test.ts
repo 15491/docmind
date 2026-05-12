@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { hydrateSessionUser, syncSessionVersionToken } from '../src/lib/auth-callbacks.ts'
+import { hydrateSessionUser, syncSessionVersionToken } from '../src/lib/auth/auth-callbacks.ts'
 
 test('syncSessionVersionToken 登录时写入新的 sessionVersion', async () => {
   const token = { sub: undefined, sessionVersion: undefined }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { changeEmailWithDeps } from '../src/lib/email-route-core.ts'
+import { changeEmailWithDeps } from '../src/lib/route-core/email-route-core.ts'
 
 test('changeEmailWithDeps updates the email and revokes existing sessions', async () => {
   const calls: string[] = []

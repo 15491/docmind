@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { handleSearchRequest } from '../src/lib/search-route-core.ts'
+import { handleSearchRequest } from '../src/lib/route-core/search-route-core.ts'
 
 test('handleSearchRequest 使用用户默认 topK 并过滤未就绪文档', async () => {
   const req = new Request('http://localhost/api/search', {

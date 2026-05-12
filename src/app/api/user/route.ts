@@ -1,15 +1,15 @@
-import { encryptUserApiKey, looksLikeMaskedApiKey, maskUserApiKey } from '@/lib/api-key-crypto'
-import { cleanupDocumentArtifacts } from '@/lib/document-cleanup'
-import { resolveStoredUserApiKey } from '@/lib/get-api-key'
-import { prisma } from '@/lib/prisma'
+import { encryptUserApiKey, looksLikeMaskedApiKey, maskUserApiKey } from '@/lib/api-key/api-key-crypto'
+import { cleanupDocumentArtifacts } from '@/lib/document/document-cleanup'
+import { resolveStoredUserApiKey } from '@/lib/api-key/get-api-key'
+import { prisma } from '@/lib/infra/prisma'
 import {
   cancelDocumentProcessingJobs,
   clearDocumentCancellationRequests,
-} from '@/lib/queue'
-import { Err, R } from '@/lib/response'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
-import { updateUserSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+} from '@/lib/infra/queue'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { updateUserSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const GET = withAuth(async (_req, _ctx, userId) => {
   const user = await prisma.user.findUnique({

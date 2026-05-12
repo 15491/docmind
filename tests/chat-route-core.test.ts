@@ -6,7 +6,7 @@ import {
   filterQualifiedChunks,
   heuristicChatRoute,
   mapChatSources,
-} from '../src/lib/chat-route-core.ts'
+} from '../src/lib/route-core/chat-route-core.ts'
 
 test('classifyChatIntent 能区分普通对话与文档问题', () => {
   assert.equal(classifyChatIntent('你好'), 'conversational')

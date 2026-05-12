@@ -55,6 +55,27 @@ src/app/dashboard/kb/[id]/chat/page.tsx
 src/app/dashboard/kb/[id]/chat/[sessionId]/page.tsx
 ```
 
+### `src/lib` 分组
+
+通用工具按职责分子目录，新增文件请放到对应组里：
+
+| 目录 | 职责 |
+| --- | --- |
+| `infra/` | 基础设施客户端：`prisma` / `redis` / `elasticsearch` / `minio` / `queue` / `worker` |
+| `http/` | HTTP 工具：`request` / `response` / `with-auth` / `validate-request` / `validators` / `cursor-pagination` / `rate-limit` |
+| `auth/` | 鉴权 / 会话 / 密码 / 验证码：`auth` / `auth.config` / `auth-callbacks` / `auth-rate-limit` / `verify-code` / `session-version` ... |
+| `document/` | 文档处理 / 上传：`document-cleanup` / `document-job-guard` / `upload-route-core` ... |
+| `api-key/` | 用户 API key 加密、读取、迁移：`api-key-crypto` / `get-api-key` / `zhipu-config` ... |
+| `route-core/` | API 路由的可测试核心（仅当其他组不适合归类时放这里）：`chat-route-core` / `search-route-core` ... |
+| `langchain/` | LangChain 抽象（已有结构） |
+| `rag/` | RAG 流程：切块、嵌入、生成、摘要 |
+| 根级 | 小工具：`utils` / `status-badge` / `email` / `mailer` / `web-search` |
+
+引入方式：
+
+- **精确路径**：`import { prisma } from '@/lib/infra/prisma'`（首选，tree-shaking 精确）
+- **聚合 barrel**：仅 `infra/` 有，方便多 client 同时引入：`import { prisma, redis, esClient } from '@/lib/infra'`
+
 ## 关键实现说明
 
 ### 鉴权

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { rateLimitWithClient, slidingWindowRateLimitScript, type RateLimitEvalClient } from '../src/lib/rate-limit-core.ts'
+import { rateLimitWithClient, slidingWindowRateLimitScript, type RateLimitEvalClient } from '../src/lib/http/rate-limit-core.ts'
 
 test('rateLimitWithClient 使用滑动窗口脚本并返回剩余额度', async () => {
   const calls: unknown[][] = []

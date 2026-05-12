@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { z } from 'zod'
-import { getCreatedAtDescCursorOrderBy } from '../src/lib/cursor-pagination.ts'
-import * as validation from '../src/lib/validate-request.ts'
-import * as validators from '../src/lib/validators.ts'
+import { getCreatedAtDescCursorOrderBy } from '../src/lib/http/cursor-pagination.ts'
+import * as validation from '../src/lib/http/validate-request.ts'
+import * as validators from '../src/lib/http/validators.ts'
 
 const {
   isValidationErrorResponse,

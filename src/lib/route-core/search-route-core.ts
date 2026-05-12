@@ -1,6 +1,6 @@
-import { Err, R } from './response'
-import { isValidationErrorResponse, parseJsonBody } from './validate-request'
-import { searchSchema } from './validators'
+import { Err, R } from '@/lib/http/response'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { searchSchema } from '@/lib/http/validators'
 
 interface SearchResult {
   id: string

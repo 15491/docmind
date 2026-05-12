@@ -1,5 +1,5 @@
-import { searchChunks as searchEsChunks } from '@/lib/elasticsearch'
-import { buildZhipuUrl } from '@/lib/zhipu-config'
+import { searchChunks as searchEsChunks } from '@/lib/infra/elasticsearch'
+import { buildZhipuUrl } from '@/lib/api-key/zhipu-config'
 
 // 调用智谱AI Embedding API，获取文本向量
 export async function embedText(text: string, apiKey?: string | null): Promise<number[]> {

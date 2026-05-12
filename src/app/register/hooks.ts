@@ -4,7 +4,7 @@ import { useState, useTransition, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
-import { http, ApiError } from "@/lib/request"
+import { http, ApiError } from "@/lib/http/request"
 import type { RegisterForm } from "./types"
 
 export function useRegisterForm() {

@@ -1,5 +1,5 @@
 import { THIRD_PARTY_PASSWORD_SETUP_MESSAGE } from './auth-messages'
-import { Err, R } from './response'
+import { Err, R } from '@/lib/http/response'
 
 type VerifyCodeResult = { ok: true } | { ok: false; error: string }
 

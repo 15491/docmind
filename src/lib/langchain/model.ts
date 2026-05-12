@@ -1,7 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 import type { BaseMessageLike } from '@langchain/core/messages'
-import { getZhipuBaseUrl } from '@/lib/zhipu-config'
+import { getZhipuBaseUrl } from '@/lib/api-key/zhipu-config'
 
 export interface HistoryMessage {
   role: 'user' | 'assistant'

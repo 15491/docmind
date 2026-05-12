@@ -4,7 +4,7 @@ import {
   deleteSessionById,
   getSessionMessagesById,
   listSessionsByKnowledgeBase,
-} from '../src/lib/session-route-core.ts'
+} from '../src/lib/route-core/session-route-core.ts'
 
 test('listSessionsByKnowledgeBase 返回分页结果并补默认标题', async () => {
   const response = await listSessionsByKnowledgeBase(

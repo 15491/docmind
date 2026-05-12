@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ApiError, http } from "@/lib/request"
+import { ApiError, http } from "@/lib/http/request"
 import type { Kb } from "./types"
 
 const PAGE_SIZE = 12

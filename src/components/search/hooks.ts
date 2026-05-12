@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useState, useSyncExternalStore } from "react"
-import { http, ApiError } from "@/lib/request"
+import { http, ApiError } from "@/lib/http/request"
 import type { SearchResult } from "./types"
 import { RECENT_SEARCHES } from "./constants"
 

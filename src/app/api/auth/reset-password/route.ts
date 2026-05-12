@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs'
-import { resetPasswordWithDeps } from '@/lib/password-route-core'
-import { prisma } from '@/lib/prisma'
-import { revokeAllSessions } from '@/lib/session-version'
-import { verifyCode } from '@/lib/verify-code'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
-import { resetPasswordSchema } from '@/lib/validators'
+import { resetPasswordWithDeps } from '@/lib/auth/password-route-core'
+import { prisma } from '@/lib/infra/prisma'
+import { revokeAllSessions } from '@/lib/auth/session-version'
+import { verifyCode } from '@/lib/auth/verify-code'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { resetPasswordSchema } from '@/lib/http/validators'
 
 export async function POST(req: Request) {
   const body = await parseJsonBody(req, resetPasswordSchema)

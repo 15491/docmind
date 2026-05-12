@@ -1,4 +1,4 @@
-import { normalizeEmailAddress } from './email'
+import { normalizeEmailAddress } from '@/lib/email'
 
 export interface CredentialsAuthUserRecord {
   id: string

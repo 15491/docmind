@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { auth } from './auth'
+import { auth } from '@/lib/auth/auth'
 import { Err } from './response'
 
 type RouteContext = { params: Promise<Record<string, string>> }

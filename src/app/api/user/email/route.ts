@@ -1,12 +1,12 @@
-import { changeEmailWithDeps } from '@/lib/email-route-core'
-import { isUniqueConstraintError } from '@/lib/prisma-errors'
-import { prisma } from '@/lib/prisma'
-import { verifyCode } from '@/lib/verify-code'
-import { Err } from '@/lib/response'
-import { revokeAllSessions } from '@/lib/session-version'
-import { isValidationErrorResponse, parseJsonBody } from '@/lib/validate-request'
-import { changeEmailSchema } from '@/lib/validators'
-import { withAuth } from '@/lib/with-auth'
+import { changeEmailWithDeps } from '@/lib/route-core/email-route-core'
+import { isUniqueConstraintError } from '@/lib/infra/prisma-errors'
+import { prisma } from '@/lib/infra/prisma'
+import { verifyCode } from '@/lib/auth/verify-code'
+import { Err } from '@/lib/http/response'
+import { revokeAllSessions } from '@/lib/auth/session-version'
+import { isValidationErrorResponse, parseJsonBody } from '@/lib/http/validate-request'
+import { changeEmailSchema } from '@/lib/http/validators'
+import { withAuth } from '@/lib/http/with-auth'
 
 export const PATCH = withAuth(async (req, _ctx, userId) => {
   try {

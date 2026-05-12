@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { sendVerifyCodeWithDeps } from '../src/lib/verify-code.ts'
+import { sendVerifyCodeWithDeps } from '../src/lib/auth/verify-code.ts'
 
 test('sendVerifyCodeWithDeps deletes the new record when email sending fails', async () => {
   const calls: string[] = []

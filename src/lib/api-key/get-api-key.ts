@@ -1,5 +1,5 @@
 import { decryptStoredApiKey, isEncryptedApiKey } from './api-key-crypto'
-import { prisma } from './prisma'
+import { prisma } from '@/lib/infra/prisma'
 import { buildEncryptedApiKeyForMigration } from './user-api-key-migration'
 
 export interface UserRagConfig {

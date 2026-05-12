@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq'
-import { getDocumentJobId } from './document-job-id'
-import { redis } from '@/lib/redis'
+import { getDocumentJobId } from '@/lib/document/document-job-id'
+import { redis } from '@/lib/infra/redis'
 
 export interface RagConfig {
   chunkSize?: number
