@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { AuthLogo } from "@/components/auth/auth-logo"
+import { DemoFooter } from "@/components/auth/demo-footer"
 import { EyeIcon, INPUT_CLS, LABEL_CLS, ICON_BTN_CLS } from "@/components/auth/form-ui"
 import { useResetPassword } from "./hooks"
 
@@ -106,6 +107,7 @@ export default function ResetPasswordPage() {
         <Suspense fallback={<div className="border-border bg-card h-72 rounded-[14px] border p-6" />}>
           <ResetForm />
         </Suspense>
+        <DemoFooter />
       </div>
     </div>
   )

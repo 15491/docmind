@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { AuthLogo } from "@/components/auth/auth-logo"
+import { DemoFooter } from "@/components/auth/demo-footer"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
 import { EyeIcon, ClearIcon, INPUT_CLS, LABEL_CLS, ICON_BTN_CLS } from "@/components/auth/form-ui"
 import { useRegisterForm } from "./hooks"
@@ -131,6 +132,7 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
+        <DemoFooter />
       </div>
     </div>
   )

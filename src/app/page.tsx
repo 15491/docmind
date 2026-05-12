@@ -95,10 +95,10 @@ export default async function HomePage() {
           © 2026 DocMind
         </div>
         <div className="text-muted-foreground flex items-center gap-4 text-[12px]">
+          <span>本项目仅用于学习与演示</span>
           <a href="https://github.com" className="hover:text-foreground transition-colors">
             GitHub
           </a>
-          <span className="hover:text-foreground cursor-pointer transition-colors">Privacy Policy</span>
         </div>
       </footer>
     </div>

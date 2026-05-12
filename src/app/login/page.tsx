@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { AuthLogo } from "@/components/auth/auth-logo"
+import { DemoFooter } from "@/components/auth/demo-footer"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
 import { EyeIcon, ClearIcon, INPUT_CLS, LABEL_CLS, ICON_BTN_CLS } from "@/components/auth/form-ui"
 import { useLoginFlow } from "./hooks"
@@ -146,6 +147,7 @@ export default function LoginPage() {
         <Suspense fallback={<div className="border-border bg-card h-80 rounded-[14px] border p-6" />}>
           <LoginForm />
         </Suspense>
+        <DemoFooter />
       </div>
     </div>
   )
