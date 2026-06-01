@@ -1,6 +1,6 @@
 "use client"
 
-import { signIn } from "next-auth/react"
+import { authClient } from "@/lib/auth/auth-client"
 
 const GITHUB_ICON = (
   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -19,14 +19,12 @@ export function OAuthButtons({ mode, providers }: { mode: "登录" | "注册"; p
         <button
           type="button"
           className={BTN_CLS}
-          onClick={() => signIn("github", { redirectTo: "/dashboard" })}
+          onClick={() => authClient.signIn.social({ provider: "github", callbackURL: "/dashboard" })}
         >
           {GITHUB_ICON}
           GitHub {mode}
         </button>
       )}
-      {/* Google 登录暂时隐藏：国内 Node.js 服务器无法直连 Google OAuth 接口，
-          待部署到海外服务器或配置服务端代理后再启用 */}
     </div>
   )
 }

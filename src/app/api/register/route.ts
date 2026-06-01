@@ -17,16 +17,26 @@ export async function POST(req: Request) {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return Err.conflict('该邮箱已注册')
 
-  const passwordHash = await bcrypt.hash(password, 12)
+  const passwordHash = await bcrypt.hash(password, 10)
+
   try {
-    await prisma.user.create({
-      data: { name, email, passwordHash, emailVerified: new Date() },
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { name, email, emailVerified: false },
+      })
+      await tx.account.create({
+        data: {
+          accountId: email,
+          providerId: 'credential',
+          userId: user.id,
+          password: passwordHash,
+        },
+      })
     })
   } catch (error) {
     if (isUniqueConstraintError(error, 'email')) {
       return Err.conflict('该邮箱已注册')
     }
-
     throw error
   }
 

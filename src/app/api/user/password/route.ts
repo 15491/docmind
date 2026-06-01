@@ -11,15 +11,18 @@ export const PATCH = withAuth(async (req, _ctx, userId) => {
   if (isValidationErrorResponse(body)) return body
 
   return changePasswordWithDeps(userId, body, {
-    findUserById: (id) => prisma.user.findUnique({
-      where: { id },
-      select: { passwordHash: true },
-    }),
-    comparePassword: (inputPassword, passwordHash) => bcrypt.compare(inputPassword, passwordHash),
-    hashPassword: (password) => bcrypt.hash(password, 12),
-    updatePasswordByUserId: (id, passwordHash) => prisma.user.update({
-      where: { id },
-      data: { passwordHash },
+    findUserById: async (id) => {
+      const account = await prisma.account.findUnique({
+        where: { userId_providerId: { userId: id, providerId: 'credential' } },
+        select: { password: true },
+      })
+      return { credentialAccount: account ?? null }
+    },
+    comparePassword: (input, hash) => bcrypt.compare(input, hash),
+    hashPassword: (password) => bcrypt.hash(password, 10),
+    updatePassword: (id, password) => prisma.account.update({
+      where: { userId_providerId: { userId: id, providerId: 'credential' } },
+      data: { password },
     }),
     revokeAllSessions,
   })

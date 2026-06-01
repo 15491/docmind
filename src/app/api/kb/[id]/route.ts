@@ -93,14 +93,19 @@ export const DELETE = withAuth(async (_req, ctx, userId) => {
 
     const documentIds = documents.map((document) => document.id)
 
+    await cancelDocumentProcessingJobs(documentIds)
+
     try {
-      await cancelDocumentProcessingJobs(documentIds)
-      await cleanupDocumentArtifacts(documents)
       await prisma.knowledgeBase.delete({ where: { id: params.id } })
     } catch (error) {
       await clearDocumentCancellationRequests(documentIds).catch(() => {})
       throw error
     }
+
+    // DB 已删除，ES + MinIO 做尽力清理
+    await cleanupDocumentArtifacts(documents).catch((err) => {
+      console.error('[/api/kb/[id] DELETE] External cleanup failed, orphans may exist:', err)
+    })
 
     return R.noData()
   } catch (error) {

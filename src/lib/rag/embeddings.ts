@@ -1,12 +1,9 @@
 import { searchChunks as searchEsChunks } from '@/lib/infra/elasticsearch'
-import { buildZhipuUrl } from '@/lib/api-key/zhipu-config'
+import { buildZhipuUrl, resolveApiKey } from '@/lib/api-key/zhipu-config'
 
 // 调用智谱AI Embedding API，获取文本向量
 export async function embedText(text: string, apiKey?: string | null): Promise<number[]> {
-  const key = apiKey?.trim() || process.env.ZHIPU_API_KEY
-  if (!key) {
-    throw new Error('Missing ZHIPU_API_KEY environment variable')
-  }
+  const key = resolveApiKey(apiKey)
 
   const requestBody = {
     model: 'embedding-3',

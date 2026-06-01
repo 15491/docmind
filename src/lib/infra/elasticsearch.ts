@@ -133,6 +133,7 @@ export async function deleteDocumentChunks(documentId: string) {
   try {
     await esClient.deleteByQuery({
       index: INDEX_NAME,
+      conflicts: 'proceed',
       query: { term: { documentId } },
     })
     console.log(`[Elasticsearch] Deleted chunks for document: ${documentId}`)

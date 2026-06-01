@@ -28,17 +28,22 @@ export const POST = withAuth(async (req, _ctx, userId) => {
       }
     }
 
+    await cancelDocumentProcessingJobs(ids)
+
     try {
-      await cancelDocumentProcessingJobs(ids)
-      await cleanupDocumentArtifacts(documents.map((document) => ({
-        id: document.id,
-        storageKey: document.storageKey,
-      })))
       await prisma.document.deleteMany({ where: { id: { in: ids } } })
     } catch (error) {
       await clearDocumentCancellationRequests(ids).catch(() => {})
       throw error
     }
+
+    // DB 已删除，ES + MinIO 做尽力清理
+    await cleanupDocumentArtifacts(documents.map((document) => ({
+      id: document.id,
+      storageKey: document.storageKey,
+    }))).catch((err) => {
+      console.error('[/api/documents/batch-delete] External cleanup failed, orphans may exist:', err)
+    })
 
     return R.ok({ deleted: ids.length })
   } catch (error) {

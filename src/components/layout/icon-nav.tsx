@@ -4,7 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { BookOpen, Settings, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
-import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { authClient } from "@/lib/auth/auth-client"
 import { GlobalSearch } from "./global-search"
 
 const NAV_ITEMS = [
@@ -15,7 +16,8 @@ const AUTO_COLLAPSE_WIDTH = 1100
 
 export function IconNav() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const router = useRouter()
+  const { data: session } = authClient.useSession()
   const [collapsed, setCollapsed] = useState(false)
   const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null)
   const [showLogout, setShowLogout] = useState(false)
@@ -225,7 +227,7 @@ export function IconNav() {
             >
               <button
                 type="button"
-                onClick={() => signOut({ redirectTo: "/login" })}
+                onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/login') } })}
                 className="text-destructive hover:bg-destructive/10 flex h-[34px] w-full items-center gap-2.5 rounded-[8px] px-3 text-[13px] transition-colors"
               >
                 <LogOut size={14} strokeWidth={2} />

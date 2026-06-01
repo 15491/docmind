@@ -1,7 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 import type { BaseMessageLike } from '@langchain/core/messages'
-import { getZhipuBaseUrl } from '@/lib/api-key/zhipu-config'
+import { getZhipuBaseUrl, resolveApiKey } from '@/lib/api-key/zhipu-config'
 
 export interface HistoryMessage {
   role: 'user' | 'assistant'
@@ -17,12 +17,6 @@ interface BuildMessagesOptions {
 
 const DEFAULT_MODEL = 'glm-4-flash'
 
-function getApiKey(apiKey?: string | null): string {
-  const key = apiKey?.trim() || process.env.ZHIPU_API_KEY?.trim()
-  if (!key) throw new Error('Missing ZHIPU_API_KEY environment variable')
-  return key
-}
-
 export function getChatModel(props?: {
   apiKey?: string | null
   temperature?: number
@@ -32,7 +26,7 @@ export function getChatModel(props?: {
   const { apiKey, temperature = 0.7, model = DEFAULT_MODEL, maxTokens } = props ?? {}
 
   return new ChatOpenAI({
-    apiKey: getApiKey(apiKey),
+    apiKey: resolveApiKey(apiKey),
     model,
     temperature,
     maxTokens,

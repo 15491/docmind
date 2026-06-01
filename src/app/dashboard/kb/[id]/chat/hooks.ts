@@ -106,6 +106,7 @@ export function useChat(kbId: string, sessionId?: string, initialMessages: Messa
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: content, kbId, sessionId: activeSessionId.current }),
+      openWhenHidden: true,
       onmessage(ev) {
         try {
           if (ev.event === "tool_call") {

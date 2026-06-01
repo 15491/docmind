@@ -12,14 +12,28 @@ export async function POST(req: Request) {
 
   return resetPasswordWithDeps(body, {
     verifyResetCode: (email, code) => verifyCode('reset-password', email, code),
-    findUserByEmail: (email) => prisma.user.findUnique({
-      where: { email },
-      select: { id: true, passwordHash: true },
-    }),
-    hashPassword: (password) => bcrypt.hash(password, 12),
-    updatePasswordByEmail: (email, passwordHash) => prisma.user.update({
-      where: { email },
-      data: { passwordHash },
+    findUserByEmail: async (email) => {
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          accounts: {
+            where: { providerId: 'credential' },
+            select: { password: true },
+            take: 1,
+          },
+        },
+      })
+      if (!user) return null
+      return {
+        id: user.id,
+        credentialAccount: user.accounts[0] ?? null,
+      }
+    },
+    hashPassword: (password) => bcrypt.hash(password, 10),
+    updatePassword: (userId, password) => prisma.account.update({
+      where: { userId_providerId: { userId, providerId: 'credential' } },
+      data: { password },
     }),
     revokeAllSessions,
   })

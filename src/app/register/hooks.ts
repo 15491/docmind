@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { authClient } from "@/lib/auth/auth-client"
 import { toast } from "sonner"
 import { http, ApiError } from "@/lib/http/request"
 import type { RegisterForm } from "./types"
@@ -73,12 +73,12 @@ export function useRegisterForm() {
         return
       }
 
-      const result = await signIn("credentials", {
+      const { error } = await authClient.signIn.email({
         email: form.email,
         password: form.password,
-        redirect: false,
       })
-      if (result?.error) {
+
+      if (error) {
         toast.error("注册成功，但登录失败，请前往登录页")
       } else {
         router.refresh()

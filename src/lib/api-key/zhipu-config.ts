@@ -9,3 +9,9 @@ export function buildZhipuUrl(path: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${baseUrl}${normalizedPath}`
 }
+
+export function resolveApiKey(userApiKey?: string | null): string {
+  const key = userApiKey?.trim() || process.env.ZHIPU_API_KEY?.trim()
+  if (!key) throw new Error('Missing ZHIPU_API_KEY')
+  return key
+}

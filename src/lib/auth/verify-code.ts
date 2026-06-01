@@ -30,6 +30,7 @@ export async function sendVerifyCodeWithDeps(
   deps: SendVerifyCodeDeps
 ) {
   const k = key(purpose, email)
+  console.log('[verify-code] sendVerifyCode key:', k)
   const previousRaw = await deps.getRecord(k)
   const previousTtl = previousRaw ? await deps.getRecordTtl(k) : 0
 
@@ -44,7 +45,8 @@ export async function sendVerifyCodeWithDeps(
   const code = String(randomInt(100000, 1000000))
   const record: CodeRecord = { code, attempts: 0, sentAt: Math.floor(Date.now() / 1000) }
   const nextRaw = JSON.stringify(record)
-  await deps.setRecord(k, TTL, nextRaw)
+  const setResult = await deps.setRecord(k, TTL, nextRaw)
+  console.log('[verify-code] setRecord result:', setResult, 'key:', k)
 
   try {
     await deps.sendEmail({
@@ -86,6 +88,7 @@ export async function verifyCode(
   const { redis } = await import('@/lib/infra/redis')
   const k = key(purpose, email)
   const raw = await redis.get(k)
+  console.log('[verify-code] get key:', k, '→', raw ? 'found' : 'null')
 
   if (!raw) return { ok: false, error: "验证码不存在或已过期" }
 

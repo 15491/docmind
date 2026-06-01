@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
+import { useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { authClient } from "@/lib/auth/auth-client"
 import { toast } from "sonner"
-import { THIRD_PARTY_PASSWORD_SIGNIN_MESSAGE } from "@/lib/auth/auth-messages"
 
 export function useLoginFlow() {
   const router = useRouter()
@@ -16,19 +16,14 @@ export function useLoginFlow() {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     startPending(async () => {
-      const result = await signIn("credentials", { email, password, redirect: false })
-      if (result?.error === "rate_limited") {
-        toast.error("登录尝试过于频繁，请稍后再试")
-        return
-      }
+      const { error } = await authClient.signIn.email({ email, password })
 
-      if (result?.error === "oauth_only") {
-        toast.error(THIRD_PARTY_PASSWORD_SIGNIN_MESSAGE)
-        return
-      }
-
-      if (result?.error) {
-        toast.error("邮箱或密码不正确")
+      if (error) {
+        if (error.status === 429) {
+          toast.error("登录尝试过于频繁，请稍后再试")
+        } else {
+          toast.error("邮箱或密码不正确")
+        }
         return
       }
 

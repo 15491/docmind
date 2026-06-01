@@ -63,14 +63,19 @@ export async function deleteDocumentById(
 
     const documentIds = [document.id]
 
+    await deps.cancelDocumentProcessingJobs(documentIds)
+
     try {
-      await deps.cancelDocumentProcessingJobs(documentIds)
-      await deps.cleanupDocumentArtifacts([{ id: document.id, storageKey: document.storageKey }])
       await deps.deleteDocument(documentId)
     } catch (error) {
       await deps.clearDocumentCancellationRequests(documentIds).catch(() => {})
       throw error
     }
+
+    // DB 已删除，ES + MinIO 做尽力清理，失败只记录不抛出
+    await deps.cleanupDocumentArtifacts([{ id: document.id, storageKey: document.storageKey }]).catch((err) => {
+      console.error('[deleteDocumentById] External cleanup failed, orphans may exist:', err)
+    })
 
     return R.noData()
   } catch (error) {

@@ -15,5 +15,13 @@ export async function register() {
     } catch (error) {
       console.error('[Instrumentation] Failed to initialize Elasticsearch:', error)
     }
+
+    try {
+      const { startWorker } = await import('@/lib/infra/worker')
+      await startWorker()
+      console.log('[Instrumentation] Worker started')
+    } catch (error) {
+      console.error('[Instrumentation] Failed to start worker:', error)
+    }
   }
 }

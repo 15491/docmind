@@ -1,10 +1,11 @@
 import Link from "next/link"
 import { ArrowRight, Shield } from "lucide-react"
 import { FEATURES, STEPS } from "./constants"
+import { headers } from "next/headers"
 import { auth } from "@/lib/auth/auth"
 
 export default async function HomePage() {
-  const session = await auth()
+  const session = await auth.api.getSession({ headers: await headers() })
   const isLoggedIn = !!session?.user?.id
 
   return (

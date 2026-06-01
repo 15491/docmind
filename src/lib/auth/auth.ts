@@ -1,61 +1,57 @@
-import NextAuth, { type DefaultSession, CredentialsSignin } from "next-auth"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { JWT } from "next-auth/jwt"
-import Credentials from "next-auth/providers/credentials"
-import { limitCredentialsSignInRequest } from "./auth-rate-limit"
+import { betterAuth } from 'better-auth'
+import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { hash, compare } from 'bcryptjs'
+import { prisma } from '@/lib/infra/prisma'
 
-class OAuthOnlyAccount extends CredentialsSignin {
-  code = "oauth_only"
-}
-class RateLimitedCredentialsSignin extends CredentialsSignin {
-  code = "rate_limited"
-}
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/infra/prisma"
-import { authConfig } from "./auth.config"
-import { authorizeCredentialsWithRateLimitDeps } from "./credentials-auth-core"
+export const auth = betterAuth({
+  database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
+  baseURL: process.env.BETTER_AUTH_URL ?? process.env.NEXTAUTH_URL,
 
-declare module "next-auth" {
-  interface Session {
-    user: { id: string } & DefaultSession["user"]
-  }
-}
+  emailAndPassword: {
+    enabled: true,
+    password: {
+      hash: (password) => hash(password, 10),
+      verify: ({ hash: h, password }) => compare(password, h),
+    },
+  },
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    sessionVersion?: string
-  }
-}
+  socialProviders: {
+    github: {
+      clientId: process.env.AUTH_GITHUB_ID!,
+      clientSecret: process.env.AUTH_GITHUB_SECRET!,
+    },
+    google: {
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    },
+  },
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  providers: [
-    ...authConfig.providers,
-    Credentials({
-      credentials: {
-        email: { type: "email" },
-        password: { type: "password" },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['github', 'google'],
+    },
+  },
+
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
+
+  // 使用 Better Auth 内置限流保护 sign-in 端点
+  rateLimit: {
+    enabled: true,
+    customRules: {
+      '/sign-in/email': {
+        window: 600, // 10 分钟
+        max: 10,     // IP 每 10 分钟最多 10 次
       },
-      async authorize(credentials, request) {
-        const result = await authorizeCredentialsWithRateLimitDeps(credentials, request, {
-          limitSignInAttempt: (req, email) => limitCredentialsSignInRequest(req, email),
-          comparePassword: bcrypt.compare,
-          findUserByEmail: (email) => prisma.user.findUnique({ where: { email } }),
-        })
-
-        if (result === 'rate_limited') {
-          throw new RateLimitedCredentialsSignin()
-        }
-
-        if (result === 'oauth_only') {
-          throw new OAuthOnlyAccount()
-        }
-
-        return result
-      },
-    }),
-  ],
+    },
+  },
 })
+
+export type Auth = typeof auth
+export type Session = typeof auth.$Infer.Session

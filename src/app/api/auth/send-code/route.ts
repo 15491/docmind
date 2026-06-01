@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { NextRequest } from 'next/server'
 import { limitSendCodeRequest } from '@/lib/auth/auth-rate-limit'
 import { THIRD_PARTY_PASSWORD_SETUP_MESSAGE } from '@/lib/auth/auth-messages'
@@ -22,16 +23,20 @@ export async function POST(req: NextRequest) {
   }
 
   if (purpose === 'reset-password') {
-    const existing = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
-      select: { passwordHash: true },
+      select: { id: true },
     })
-    if (!existing) return Err.notFound('该邮箱未注册')
-    if (!existing.passwordHash) return Err.invalid(THIRD_PARTY_PASSWORD_SETUP_MESSAGE)
+    if (!user) return Err.notFound('该邮箱未注册')
+    const credentialAccount = await prisma.account.findUnique({
+      where: { userId_providerId: { userId: user.id, providerId: 'credential' } },
+      select: { id: true },
+    })
+    if (!credentialAccount) return Err.invalid(THIRD_PARTY_PASSWORD_SETUP_MESSAGE)
   }
 
   if (purpose === 'change-email') {
-    const session = await auth()
+    const session = await auth.api.getSession({ headers: await headers() })
     if (!session?.user?.id) return Err.unauthorized()
 
     const existing = await prisma.user.findUnique({ where: { email } })

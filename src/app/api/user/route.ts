@@ -19,8 +19,7 @@ export const GET = withAuth(async (_req, _ctx, userId) => {
       name: true,
       email: true,
       image: true,
-      passwordHash: true,
-      accounts: { select: { provider: true } },
+      accounts: { select: { providerId: true, password: true } },
       zhipuApiKey: true,
       ragConfig: true,
     },
@@ -28,6 +27,7 @@ export const GET = withAuth(async (_req, _ctx, userId) => {
   if (!user) return Err.notFound('用户不存在')
 
   const apiKey = await resolveStoredUserApiKey(userId, user.zhipuApiKey)
+  const credentialAccount = user.accounts.find((a) => a.providerId === 'credential')
 
   return R.ok({
     user: {
@@ -35,8 +35,8 @@ export const GET = withAuth(async (_req, _ctx, userId) => {
       name: user.name,
       email: user.email,
       image: user.image,
-      hasPassword: !!user.passwordHash,
-      providers: user.accounts.map((account) => account.provider),
+      hasPassword: !!credentialAccount?.password,
+      providers: user.accounts.map((a) => a.providerId).filter((p) => p !== 'credential'),
       hasZhipuApiKey: !!apiKey,
       zhipuApiKey: maskUserApiKey(apiKey),
       ragConfig: user.ragConfig ?? null,

@@ -5,17 +5,17 @@ type VerifyCodeResult = { ok: true } | { ok: false; error: string }
 
 export interface ResetPasswordDeps {
   verifyResetCode: (email: string, code: string) => Promise<VerifyCodeResult>
-  findUserByEmail: (email: string) => Promise<{ id: string; passwordHash: string | null } | null>
+  findUserByEmail: (email: string) => Promise<{ id: string; credentialAccount: { password: string | null } | null } | null>
   hashPassword: (password: string) => Promise<string>
-  updatePasswordByEmail: (email: string, passwordHash: string) => Promise<unknown>
+  updatePassword: (userId: string, password: string) => Promise<unknown>
   revokeAllSessions: (userId: string) => Promise<unknown>
 }
 
 export interface ChangePasswordDeps {
-  findUserById: (userId: string) => Promise<{ passwordHash: string | null } | null>
-  comparePassword: (inputPassword: string, passwordHash: string) => Promise<boolean>
+  findUserById: (userId: string) => Promise<{ credentialAccount: { password: string | null } | null } | null>
+  comparePassword: (inputPassword: string, hash: string) => Promise<boolean>
   hashPassword: (password: string) => Promise<string>
-  updatePasswordByUserId: (userId: string, passwordHash: string) => Promise<unknown>
+  updatePassword: (userId: string, password: string) => Promise<unknown>
   revokeAllSessions: (userId: string) => Promise<unknown>
 }
 
@@ -28,10 +28,10 @@ export async function resetPasswordWithDeps(
 
   const user = await deps.findUserByEmail(input.email)
   if (!user) return Err.notFound('账号不存在')
-  if (!user.passwordHash) return Err.invalid(THIRD_PARTY_PASSWORD_SETUP_MESSAGE)
+  if (!user.credentialAccount?.password) return Err.invalid(THIRD_PARTY_PASSWORD_SETUP_MESSAGE)
 
-  const passwordHash = await deps.hashPassword(input.newPassword)
-  await deps.updatePasswordByEmail(input.email, passwordHash)
+  const password = await deps.hashPassword(input.newPassword)
+  await deps.updatePassword(user.id, password)
   await deps.revokeAllSessions(user.id)
 
   return R.noData()
@@ -45,15 +45,16 @@ export async function changePasswordWithDeps(
   const user = await deps.findUserById(userId)
   if (!user) return Err.notFound('用户不存在')
 
-  if (user.passwordHash) {
-    if (!input.oldPassword) return Err.invalid('请输入当前密码')
+  const currentPassword = user.credentialAccount?.password ?? null
 
-    const valid = await deps.comparePassword(input.oldPassword, user.passwordHash)
+  if (currentPassword) {
+    if (!input.oldPassword) return Err.invalid('请输入当前密码')
+    const valid = await deps.comparePassword(input.oldPassword, currentPassword)
     if (!valid) return Err.invalid('当前密码不正确')
   }
 
-  const passwordHash = await deps.hashPassword(input.newPassword)
-  await deps.updatePasswordByUserId(userId, passwordHash)
+  const password = await deps.hashPassword(input.newPassword)
+  await deps.updatePassword(userId, password)
   await deps.revokeAllSessions(userId)
 
   return R.noData()
