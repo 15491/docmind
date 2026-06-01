@@ -13,12 +13,16 @@ export function ProfileSection() {
     hasPassword,
     hasGithubAccount,
     isLinkingGithub,
+    isUnlinkingGithub,
+    unlinkConfirm,
+    setUnlinkConfirm,
     oldPwd,
     setOldPwd,
     newPwd,
     setNewPwd,
     handleSave,
     handleGithubLink,
+    handleGithubUnlink,
   } = useProfileForm()
   const [showEmailChange, setShowEmailChange] = useState(false)
   const { newEmail, setNewEmail, code, setCode, step, sending, saving, error: emailError, countdown, sendCode, confirmChange } = useEmailChange()
@@ -86,7 +90,9 @@ export function ProfileSection() {
               </div>
               <p className="text-[12px] leading-relaxed text-muted-foreground">
                 {hasGithubAccount
-                  ? "当前账号已绑定 GitHub。设置邮箱密码后，你可以自由选择 GitHub 或邮箱密码登录。"
+                  ? hasPassword
+                    ? "当前账号已绑定 GitHub。设置邮箱密码后，你可以自由选择 GitHub 或邮箱密码登录。"
+                    : "GitHub 是你当前唯一的登录方式，设置邮箱密码后才能解绑。"
                   : "当前账号还没有绑定 GitHub。绑定后可直接使用 GitHub 登录，也能与邮箱密码并存。"}
               </p>
               {!hasGithubAccount && (
@@ -98,6 +104,37 @@ export function ProfileSection() {
                 >
                   {isLinkingGithub ? "跳转中…" : "绑定 GitHub"}
                 </button>
+              )}
+              {hasGithubAccount && hasPassword && (
+                unlinkConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] text-muted-foreground">确认解绑 GitHub？</span>
+                    <button
+                      type="button"
+                      onClick={handleGithubUnlink}
+                      disabled={isUnlinkingGithub}
+                      className="h-8 rounded-[8px] border border-destructive/40 px-3 text-[12px] font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {isUnlinkingGithub ? "解绑中…" : "确认解绑"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUnlinkConfirm(false)}
+                      disabled={isUnlinkingGithub}
+                      className="h-8 rounded-[8px] border border-input px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setUnlinkConfirm(true)}
+                    className="h-9 rounded-[8px] border border-input bg-card px-3.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    解绑 GitHub
+                  </button>
+                )
               )}
             </div>
           </FieldRow>

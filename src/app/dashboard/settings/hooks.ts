@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { signIn, signOut } from "next-auth/react"
+import { authClient } from "@/lib/auth/auth-client"
 import { toast } from "sonner"
 import { http, ApiError } from "@/lib/http/request"
 
@@ -13,6 +13,8 @@ export function useProfileForm() {
   const [hasPassword, setHasPassword] = useState<boolean | null>(null)
   const [hasGithubAccount, setHasGithubAccount] = useState(false)
   const [isLinkingGithub, setIsLinkingGithub] = useState(false)
+  const [isUnlinkingGithub, setIsUnlinkingGithub] = useState(false)
+  const [unlinkConfirm, setUnlinkConfirm] = useState(false)
   const [oldPwd, setOldPwd] = useState("")
   const [newPwd, setNewPwd] = useState("")
 
@@ -70,7 +72,7 @@ export function useProfileForm() {
           })
 
       toast.success("密码已更新，请重新登录")
-      await signOut({ redirectTo: "/login" })
+      await authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = '/login' } } })
     } catch (error) {
       const baseMessage = error instanceof Error ? error.message : "保存失败"
       const message = nicknameSaved && isUpdatingPassword ? `${baseMessage}，昵称已保存` : baseMessage
@@ -82,9 +84,23 @@ export function useProfileForm() {
   const handleGithubLink = async () => {
     setIsLinkingGithub(true)
     try {
-      await signIn("github", { redirectTo: "/dashboard/settings" })
+      await authClient.linkSocial({ provider: "github", callbackURL: "/dashboard/settings" })
     } finally {
       setIsLinkingGithub(false)
+    }
+  }
+
+  const handleGithubUnlink = async () => {
+    setIsUnlinkingGithub(true)
+    try {
+      await authClient.unlinkAccount({ providerId: "github" })
+      setHasGithubAccount(false)
+      setUnlinkConfirm(false)
+      toast.success("GitHub 已解绑")
+    } catch {
+      toast.error("解绑失败，请稍后重试")
+    } finally {
+      setIsUnlinkingGithub(false)
     }
   }
 
@@ -96,12 +112,16 @@ export function useProfileForm() {
     hasPassword,
     hasGithubAccount,
     isLinkingGithub,
+    isUnlinkingGithub,
+    unlinkConfirm,
+    setUnlinkConfirm,
     oldPwd,
     setOldPwd,
     newPwd,
     setNewPwd,
     handleSave,
     handleGithubLink,
+    handleGithubUnlink,
   }
 }
 
@@ -158,7 +178,7 @@ export function useEmailChange() {
       await http.patch("/api/user/email", { email: newEmail, code })
       setStep("done")
       toast.success("邮箱已更新，请重新登录")
-      await signOut({ redirectTo: "/login" })
+      await authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = '/login' } } })
       return
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "修改失败")
@@ -257,7 +277,7 @@ export function useDangerZone() {
     try {
       await http.del("/api/user")
       toast.success("账户已注销")
-      await signOut({ redirectTo: "/" })
+      await authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = '/' } } })
     } catch {
       toast.error("注销失败，请稍后重试")
       setDeleting(false)
